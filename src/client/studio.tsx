@@ -14,6 +14,7 @@ import {
   Plus,
   Search,
   LoaderCircle,
+  ChevronDown,
 } from "lucide-react";
 import { active, statusLabel, type Job, type Snapshot } from "../shared.js";
 import { request, imageURL, download, lastSnapshot, cache, pollSnapshot, APIError } from "./api.js";
@@ -27,6 +28,7 @@ import {
   galleryMatches,
 } from "./gallery-preferences.js";
 import { previewCandidate } from "./preview-follow.js";
+import { groupByDay } from "./gallery-timeline.js";
 import { STYLE } from "./style.js";
 const DRAFT = "qwen-studio-draft-v1",
   RECEIPT = "qwen-studio-submission-v1";
@@ -104,7 +106,11 @@ export function Studio() {
     [filter, setFilter] = useState(() => defaultGallery(privacy)),
     [selection, setSelection] = useState<Set<string>>(new Set()),
     [selecting, setSelecting] = useState(false),
-    [detailId, setDetailId] = useState<string | null>(null);
+    [detailId, setDetailId] = useState<string | null>(null),
+    [timeline, setTimeline] = useState(
+      () => localStorage.getItem("qwen-studio-gallery-timeline") === "1",
+    ),
+    [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState<{
       action: string;
       ids: string[];
@@ -359,6 +365,86 @@ export function Studio() {
       setError(String(e));
     }
   };
+  const card = (job: Job) => (
+                <article
+                  className={`q2-card ${selection.has(job.id) ? "selected" : ""}`}
+                  key={job.id}
+                >
+                  <button
+                    className="q2-thumb"
+                    aria-label={
+                      selecting
+                        ? `选择图片：${job.prompt}`
+                        : `查看图片：${job.prompt}`
+                    }
+                    aria-pressed={selecting ? selection.has(job.id) : undefined}
+                    onClick={() =>
+                      selecting ? toggle(job.id) : setDetailId(job.id)
+                    }
+                  >
+                    {job.status === "complete" ? (
+                      <img
+                        src={imageURL(job.id)}
+                        alt={job.prompt}
+                        loading="lazy"
+                        width={job.width}
+                        height={job.height}
+                      />
+                    ) : (
+                      <div className="q2-task">
+                        <Image size={24} />
+                        <strong>{statusLabel(job.status)}</strong>
+                        {active(job) && (
+                          <div
+                            className={`q2-progress ${job.source === "remote" && !job.progress_supported ? "q2-indeterminate" : ""}`}
+                          >
+                            <i
+                              style={
+                                job.source === "remote" && !job.progress_supported
+                                  ? undefined
+                                  : {
+                                      width: `${Math.min(100, Math.max(3, ((job.step ?? 0) / (job.sampling_steps ?? job.steps)) * 100))}%`,
+                                    }
+                              }
+                            />
+                          </div>
+                        )}
+                        <span>
+                          {job.source === "remote" && !job.progress_supported && active(job)
+                            ? "远程服务处理中"
+                            : job.status === "running"
+                              ? `${job.step ?? 0} / ${job.sampling_steps ?? job.steps} 步`
+                              : (job.error ?? "任务已记录")}
+                        </span>
+                      </div>
+                    )}
+                    {selecting && (
+                      <span className="q2-check">
+                        {selection.has(job.id) && <Check size={13} />}
+                      </span>
+                    )}
+                    {job.archived && (
+                      <span className="q2-archived">已归档</span>
+                    )}
+                  </button>
+                  <div className="q2-caption">
+                    <span title={job.prompt}>{job.prompt}</span>
+                    <button
+                      aria-label={job.favorite ? "取消收藏" : "收藏图片"}
+                      aria-pressed={Boolean(job.favorite)}
+                      onClick={() =>
+                        void action("favorite", [job.id], !job.favorite)
+                      }
+                    >
+                      <Star
+                        size={13}
+                        fill={job.favorite ? "currentColor" : "none"}
+                      />
+                    </button>
+                  </div>
+                </article>
+  );
+
   const ids = [...selection],
     allSelected =
       visible.length > 0 && visible.every((j) => selection.has(j.id));
@@ -720,6 +806,19 @@ export function Studio() {
             >
               {selecting ? "完成" : "选择"}
             </button>
+            <button
+              aria-pressed={timeline}
+              title={timeline ? "切换为网格视图" : "按日期时间轴显示"}
+              onClick={() =>
+                setTimeline((on) => {
+                  const next = !on;
+                  localStorage.setItem("qwen-studio-gallery-timeline", next ? "1" : "0");
+                  return next;
+                })
+              }
+            >
+              {timeline ? "网格" : "时间轴"}
+            </button>
           </div>
           {privacy && filter === "private" && (
             <p className="q2-gallery-hint">
@@ -793,87 +892,45 @@ export function Studio() {
             </div>
           )}
           <div className="q2-gallery-scroll">
-            <div className="q2-masonry">
-              {visible.map((job) => (
-                <article
-                  className={`q2-card ${selection.has(job.id) ? "selected" : ""}`}
-                  key={job.id}
-                >
-                  <button
-                    className="q2-thumb"
-                    aria-label={
-                      selecting
-                        ? `选择图片：${job.prompt}`
-                        : `查看图片：${job.prompt}`
-                    }
-                    aria-pressed={selecting ? selection.has(job.id) : undefined}
-                    onClick={() =>
-                      selecting ? toggle(job.id) : setDetailId(job.id)
-                    }
-                  >
-                    {job.status === "complete" ? (
-                      <img
-                        src={imageURL(job.id)}
-                        alt={job.prompt}
-                        loading="lazy"
-                        width={job.width}
-                        height={job.height}
-                      />
-                    ) : (
-                      <div className="q2-task">
-                        <Image size={24} />
-                        <strong>{statusLabel(job.status)}</strong>
-                        {active(job) && (
-                          <div
-                            className={`q2-progress ${job.source === "remote" && !job.progress_supported ? "q2-indeterminate" : ""}`}
-                          >
-                            <i
-                              style={
-                                job.source === "remote" && !job.progress_supported
-                                  ? undefined
-                                  : {
-                                      width: `${Math.min(100, Math.max(3, ((job.step ?? 0) / (job.sampling_steps ?? job.steps)) * 100))}%`,
-                                    }
-                              }
-                            />
-                          </div>
-                        )}
-                        <span>
-                          {job.source === "remote" && !job.progress_supported && active(job)
-                            ? "远程服务处理中"
-                            : job.status === "running"
-                              ? `${job.step ?? 0} / ${job.sampling_steps ?? job.steps} 步`
-                              : (job.error ?? "任务已记录")}
-                        </span>
-                      </div>
-                    )}
-                    {selecting && (
-                      <span className="q2-check">
-                        {selection.has(job.id) && <Check size={13} />}
-                      </span>
-                    )}
-                    {job.archived && (
-                      <span className="q2-archived">已归档</span>
-                    )}
-                  </button>
-                  <div className="q2-caption">
-                    <span title={job.prompt}>{job.prompt}</span>
-                    <button
-                      aria-label={job.favorite ? "取消收藏" : "收藏图片"}
-                      aria-pressed={Boolean(job.favorite)}
-                      onClick={() =>
-                        void action("favorite", [job.id], !job.favorite)
-                      }
-                    >
-                      <Star
-                        size={13}
-                        fill={job.favorite ? "currentColor" : "none"}
-                      />
-                    </button>
-                  </div>
-                </article>
-              ))}
-            </div>
+            {timeline ? (
+              <div className="q2-timeline">
+                {groupByDay(visible).map((group) => {
+                  const open = !collapsed.has(group.key);
+                  return (
+                    <section className="q2-day" key={group.key}>
+                      <button
+                        className="q2-day-head"
+                        aria-expanded={open}
+                        onClick={() =>
+                          setCollapsed((prev) => {
+                            const next = new Set(prev);
+                            if (next.has(group.key)) next.delete(group.key);
+                            else next.add(group.key);
+                            return next;
+                          })
+                        }
+                      >
+                        <ChevronDown
+                          size={14}
+                          style={
+                            open ? undefined : { transform: "rotate(-90deg)" }
+                          }
+                        />
+                        <span>{group.label}</span>
+                        <small>{group.items.length} 张</small>
+                      </button>
+                      {open && (
+                        <div className="q2-masonry">
+                          {group.items.map((job) => card(job))}
+                        </div>
+                      )}
+                    </section>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="q2-masonry">{visible.map((job) => card(job))}</div>
+            )}
             {!visible.length && (
               <div className="q2-empty">
                 <Image size={28} />
