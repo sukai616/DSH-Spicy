@@ -79,7 +79,7 @@ export function presetValues(input: unknown): Values {
       .split("x")
       .some(
         (n: string) =>
-          !Number.isInteger(+n) || +n < 512 || +n > 2048 || +n % 16,
+          !Number.isInteger(+n) || +n < 256 || +n > 4096 || +n % 16,
       )
   )
     throw Error("预设尺寸无效");

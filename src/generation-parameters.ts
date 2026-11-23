@@ -8,16 +8,16 @@ export const generationParameters = {
         },
         width: {
           type: "integer",
-          description: "Width in pixels, 512–2048, multiple of16; default1024.",
+          description: "Width in pixels, 256–4096, multiple of16; default1024.",
         },
         height: {
           type: "integer",
           description:
-            "Height in pixels, 512–2048, multiple of16; default1024.",
+            "Height in pixels, 256–4096, multiple of16; default1024.",
         },
         steps: {
           type: "integer",
-          description: "Sampling steps1–60, default40.",
+          description: "Sampling steps1–60, default8.",
         },
         seed: {
           type: "integer",

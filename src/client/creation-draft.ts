@@ -40,7 +40,7 @@ export const draftDefaults: CreationDraft = {
   guidance: 1,
   scheduler: "linear",
   size: "1024x1024",
-  steps: 40,
+  steps: 8,
   seed: "",
   sourceId: "",
   sourceName: "",
@@ -126,8 +126,8 @@ export function generationPayload(
     [width, height].some(
       (n) =>
         !Number.isInteger(n) ||
-        Number(n) < 512 ||
-        Number(n) > 2048 ||
+        Number(n) < 256 ||
+        Number(n) > 4096 ||
         Number(n) % 16,
     )
   )

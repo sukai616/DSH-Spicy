@@ -17,7 +17,7 @@ export function draftFromSettings(p: Record<string, any>): CreationDraft {
   if (Object.keys(p).some(k => !allowed.includes(k))) throw Error("预设仅接受生图参数，不能保存提示词正文、连接设置或密钥");
   const d: CreationDraft = {
     ...draftDefaults, prompt: "preset validation",
-    size: `${p.width ?? 1024}x${p.height ?? 1024}`, steps: p.steps ?? 40,
+    size: `${p.width ?? 1024}x${p.height ?? 1024}`, steps: p.steps ?? 8,
     seed: p.seed == null ? "" : String(p.seed), negativePrompt: p.negative_prompt ?? "",
     guidance: p.guidance ?? 1, scheduler: p.scheduler ?? "linear",
     changeStrength: p.change_strength ?? .45,

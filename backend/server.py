@@ -62,8 +62,8 @@ def validate(data):
     prompt = data.get('prompt', '')
     if not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 16000: raise ValueError('提示词需为1–16000个字符')
     width, height = data.get('width', 1024), data.get('height', 1024)
-    if any(type(v) is not int or not 512 <= v <= 2048 or v % 16 for v in [width, height]): raise ValueError('尺寸应为512–2048之间的16倍数')
-    steps, seed = data.get('steps', 40), data.get('seed')
+    if any(type(v) is not int or not 256 <= v <= 4096 or v % 16 for v in [width, height]): raise ValueError('尺寸应为256–4096之间的16倍数')
+    steps, seed = data.get('steps', 8), data.get('seed')
     if type(steps) is not int or not 1 <= steps <= 60: raise ValueError('步数应为1–60')
     if seed is not None and (type(seed) is not int or not 0 <= seed < 2**32): raise ValueError('种子应为0–4294967295')
 
@@ -353,7 +353,7 @@ def preserve_unmasked(output, folder):
 
 def generate(job, output, progress, cancel):
     global QWEN, ENGINE_KEY
-    os.environ['HF_HUB_OFFLINE'] = '1'
+    os.environ.setdefault('HF_HUB_OFFLINE', '0')
     import mlx.core as mx
     wanted = engine_key(job)
     if QWEN is None or wanted != ENGINE_KEY:

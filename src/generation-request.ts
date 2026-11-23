@@ -50,7 +50,7 @@ export function generationPayload(args: GenerationArgs, id: string) {
     ...(args.image_mode ? { image_mode: args.image_mode } : {}),
     width: args.width ?? 1024,
     height: args.height ?? 1024,
-    steps: args.steps ?? 40,
+    steps: args.steps ?? 8,
     seed: args.seed ?? null,
     ...(args.source_image_ids?.length
       ? { source_image_ids: args.source_image_ids, reference_mode: "edit" }

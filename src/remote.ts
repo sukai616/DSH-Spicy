@@ -88,7 +88,7 @@ export class RemoteQueue {
     const prompt = data.prompt,
       width = data.width ?? 1024,
       height = data.height ?? 1024,
-      steps = mode === "turbo" ? 8 : data.steps ?? 40,
+      steps = data.steps ?? 8,
       seed = data.seed ?? null;
     if (typeof prompt !== "string" || !prompt.trim() || prompt.length > 16000)
       throw Error("请填写1–16000字的描述");
@@ -97,8 +97,8 @@ export class RemoteQueue {
         (v) =>
           typeof v !== "number" ||
           !Number.isInteger(v) ||
-          v < 512 ||
-          v > 2048 ||
+          v < 256 ||
+          v > 4096 ||
           v % 16,
       )
     )
