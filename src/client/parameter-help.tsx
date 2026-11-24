@@ -2,7 +2,7 @@ import { useId, useLayoutEffect, useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { CircleHelp } from "lucide-react";
 export const STEPS_HELP =
-  "步数是模型逐步生成图像的次数。更多步数通常耗时更长，并不保证更好。可先用 20 步试构图，再尝试 40 步；不同模型的合适值不同。";
+  "步数是模型逐步生成图像的次数。本机 Turbo 是蒸馏权重，设计采样点就是 8 步且已锁定；调高不会增加真实细节，只会放大量化噪声，肉眼表现为皮肤发霉、脏污。需要更多细节请用 LoRA 或提高分辨率。远程质量档才可自选步数。";
 export const SEED_HELP =
   "种子决定生成时使用的随机起点。留空会随机选择；固定种子并保持模型、描述和参数一致，有助于复现和比较。改变描述仍会改变画面，不同运行环境不保证完全一致。";
 export function ParameterHelp({ name, text }: { name: string; text: string }) {
