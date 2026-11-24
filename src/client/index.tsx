@@ -114,7 +114,14 @@ function StudioIcon({ size = 16 }: { size?: number }) {
   return <Images size={size} aria-hidden="true" />;
 }
 function StudioPage() {
+  // 顶部标题栏：视频模块已移除，这里只显示工坊名，不再渲染图像/视频切换。
+  // 内边距用固定值而不引用 --dsh-frame-top-clearance：宿主用它给 .mainPanel
+  // 算补偿 padding-top，改它会连带改变详情弹窗的定位盒高度，令底部露出一级内容。
   return <div style={{height: "100%", display: "flex", flexDirection: "column", minHeight: 0}}>
+    {/* 左右 24px 与下方 .q2-brand 一致，标题和「图库」左对齐；不画分隔线 */}
+    <nav aria-label="图像工坊" style={{display: "flex", gap: 6, padding: "24px 24px 8px"}}>
+      <span style={{fontWeight: 600}}>图像工坊</span>
+    </nav>
     <div style={{flex: 1, minHeight: 0}}><Studio /></div>
   </div>;
 }

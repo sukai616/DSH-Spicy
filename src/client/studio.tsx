@@ -457,7 +457,6 @@ export function Studio() {
     <section className="q2 q2-studio" aria-label="图像工坊">
       <style>{STYLE}</style>
       <header className="q2-brand">
-        <h2>图像</h2>
         <nav className="q2-nav" aria-label="工作室视图">
           <button
             aria-pressed={view === "gallery"}
