@@ -41,6 +41,19 @@ import {
 } from "./creation-draft.js";
 /** Turbo 蒸馏权重的设计采样点；本机只有 Turbo，步数不可调。 */
 const TURBO_STEPS = 8;
+/** 图库筛选项：option 和「当前值」标签共用同一份定义，避免两处文案走样。 */
+const GALLERY_FILTERS: ReadonlyArray<{
+  value: string;
+  label: string;
+  privateOnly?: boolean;
+  publicOnly?: boolean;
+}> = [
+  { value: "all", label: "全部作品", publicOnly: true },
+  { value: "favorites", label: "收藏" },
+  { value: "private", label: "隐私图库", privateOnly: true },
+  { value: "archived", label: "已归档" },
+  { value: "trash", label: "回收站" },
+];
 function readDraft(): Draft {
   try {
     const merged = { ...defaults, ...JSON.parse(localStorage.getItem(DRAFT) ?? "{}") };
@@ -807,20 +820,28 @@ export function Studio() {
                 }}
               />
             </label>
-            <select
-              aria-label="图库筛选"
-              value={filter}
-              onChange={(e) => {
-                setFilter(e.target.value);
-                setSelection(new Set());
-              }}
-            >
-              {!privacy && <option value="all">全部作品</option>}
-              <option value="favorites">收藏</option>
-              {privacy && <option value="private">隐私图库</option>}
-              <option value="archived">已归档</option>
-              <option value="trash">回收站</option>
-            </select>
+            {/* 原生 select 的宽度取最宽的 option，短文案（收藏）会被撑出空白、
+                箭头飞到远端。这里用可见文案 + 箭头承担宽度，原生 select 透明覆盖。 */}
+            <label className="q2-filter">
+              <span>{GALLERY_FILTERS.find((f) => f.value === filter)?.label ?? ""}</span>
+              <ChevronDown size={13} aria-hidden="true" />
+              <select
+                aria-label="图库筛选"
+                value={filter}
+                onChange={(e) => {
+                  setFilter(e.target.value);
+                  setSelection(new Set());
+                }}
+              >
+                {GALLERY_FILTERS.filter((f) =>
+                  f.privateOnly ? privacy : f.publicOnly ? !privacy : true,
+                ).map((f) => (
+                  <option key={f.value} value={f.value}>
+                    {f.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               aria-pressed={selecting}
               onClick={() => {

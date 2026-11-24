@@ -22,7 +22,14 @@ export const STYLE = `
 .q2 .q2-nav button:hover:not(:disabled){background:transparent;color:var(--q-text);box-shadow:none}.q2-nav button span{color:var(--q-muted);font-size:.875em}.q2-nav .q2-unload{margin-left:auto}
 .q2-toolbar{display:flex;gap:12px;align-items:center;padding:16px 24px;flex-shrink:0}.q2-search{flex:1;min-width:60px;position:relative}
 .q2-search svg{position:absolute;left:0;top:.7em;color:var(--q-muted)}.q2 .q2-search input{width:100%;border:0;background:transparent;padding:.55em .3em .55em 1.8em}
-.q2-toolbar select{border:0;background:transparent;max-width:10em}.q2-gallery-scroll{flex:1;min-height:0;overflow:auto;padding:0 24px 24px;scrollbar-gutter:stable}
+.q2-toolbar select{border:0;background:transparent;max-width:10em}
+/* 筛选下拉：宽度由「当前文案 + 箭头」决定，原生 select 透明覆盖以保留原生的点击与选择。
+   这样「收藏」「隐私图库」「回收站」等不同长度的筛选项都不会多出空白。
+   必须用 .q2 label 前缀压过上面 .q2 label 的纵向 flex，否则文字与箭头会分行。 */
+.q2 label.q2-filter{position:relative;display:inline-flex;flex-direction:row;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;cursor:pointer;white-space:nowrap}
+.q2 label.q2-filter:hover{background:var(--q-surface)}
+.q2 label.q2-filter>svg{color:var(--q-muted);flex-shrink:0}
+.q2-toolbar .q2-filter>select{position:absolute;inset:0;width:100%;height:100%;max-width:none;opacity:0;border:0;background:transparent;padding:0;cursor:pointer;appearance:none}.q2-gallery-scroll{flex:1;min-height:0;overflow:auto;padding:0 24px 24px;scrollbar-gutter:stable}
 .q2-lora-presets{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .q2-lora-presets button{padding:4px 10px;font-size:12px;border-radius:5px;border:1px solid color-mix(in srgb,currentColor 22%,transparent);background:transparent;color:inherit;cursor:pointer}
 .q2-lora-presets button:hover{border-color:color-mix(in srgb,currentColor 45%,transparent)}
