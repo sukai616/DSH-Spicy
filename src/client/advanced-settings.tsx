@@ -597,9 +597,11 @@ export function AdvancedSettings({
           <div className="q2-advanced-fields">
             <label>
               <span className="q2-field-title">CFG 引导强度
-                <ParameterHelp name="CFG 引导强度" text={draft.controlEnabled || draft.maskEnabled
-                  ? "当前使用结构控制或蒙版：CFG 大于 1 时会启用无条件分支，负向词可以为空。它控制引导强度，不是通用画质旋钮。填写负向词且 CFG 为 1 时会自动使用 2.5。"
-                  : "普通文生图中，只有负向词非空且 CFG 大于 1 时才生效；没有负向词时会忽略这个值。它不是通用画质旋钮。填写负向词且 CFG 为 1 时会自动使用 2.5。"} />
+                <ParameterHelp name="CFG 引导强度" text={!remote
+                  ? "本机 Turbo 权重不走 CFG，此项固定为 1 且不可修改。需要强化某个元素请写进正面描述。"
+                  : draft.controlEnabled || draft.maskEnabled
+                    ? "当前使用结构控制或蒙版：CFG 大于 1 时会启用无条件分支，负向词可以为空。它控制引导强度，不是通用画质旋钮。填写负向词且 CFG 为 1 时会自动使用 2.5。"
+                    : "远程质量档的普通文生图中，只有负向词非空且 CFG 大于 1 时才生效；没有负向词时会忽略这个值。它不是通用画质旋钮。"} />
                 {draft.negativePrompt.trim() && draft.guidance <= 1 && <small>实际 2.5（自动）</small>}
               </span>
               <input

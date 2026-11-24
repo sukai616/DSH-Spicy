@@ -1,6 +1,6 @@
 # 图像插件：安装、硬件自查与连接
 
-插件包 `dsh-qwen-studio`。模型权重和推理环境**不包含**在插件包里，需要单独准备。
+插件包 `dsh-qwen-mlx-studio`（显示名「图像工坊」）。模型权重和推理环境**不包含**在插件包里，需要单独准备。
 
 Agent 照这份文档做，就能把「用户机器够不够 → 装 → 连 → 出第一张图」走完；每一步都给了可执行命令和判读标准。
 
@@ -38,22 +38,22 @@ nvidia-smi --query-gpu=name,memory.total --format=csv
 **A. 插件市场**（最省事）：DSH → 插件 → 自定义插件市场 → 发现 → 添加索引
 `https://kingcharleslzy-ai.github.io/DSH-Spicy/index.json`，选择DSH-Spicy安装。
 
-**B. 安装包（推荐给 Agent 执行）**：从 [Releases](https://github.com/kingcharleslzy-ai/DSH-Spicy/releases/latest) 下载 `dsh-qwen-studio.tgz`，然后：
+**B. 安装包（推荐给 Agent 执行）**：从 [Releases](https://github.com/kingcharleslzy-ai/DSH-Spicy/releases/latest) 下载 `dsh-qwen-mlx-studio.tgz`，然后：
 
 ```sh
 # macOS / Linux（全局有 dsh 时）
-dsh plugin --profile desktop add /绝对路径/dsh-qwen-studio.tgz
+dsh plugin --profile desktop add /绝对路径/dsh-qwen-mlx-studio.tgz
 
 # macOS 没有全局 dsh：用桌面版内置 CLI
 sh "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" \
-  plugin --profile desktop add /绝对路径/dsh-qwen-studio.tgz
+  plugin --profile desktop add /绝对路径/dsh-qwen-mlx-studio.tgz
 ```
 
 ```powershell
 # Windows PowerShell 可以直接调用 dsh.cmd；含空格的完整路径需使用 & 运算符
-dsh.cmd plugin --profile desktop add "C:\绝对路径\dsh-qwen-studio.tgz"
+dsh.cmd plugin --profile desktop add "C:\绝对路径\dsh-qwen-mlx-studio.tgz"
 # 没有 PATH 入口时，替换为桌面安装目录下的实际文件：
-# & "C:\实际安装目录\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add "C:\绝对路径\dsh-qwen-studio.tgz"
+# & "C:\实际安装目录\resources\runtime\cli\bin\dsh.cmd" plugin --profile desktop add "C:\绝对路径\dsh-qwen-mlx-studio.tgz"
 ```
 
 **C. 源码**：仅开发用，链接安装不会被自动更新覆盖。
@@ -61,8 +61,8 @@ dsh.cmd plugin --profile desktop add "C:\绝对路径\dsh-qwen-studio.tgz"
 安装前校验：将以下输出与同一 Release 的 SHA256SUMS.txt 中对应文件一行逐字核对，不匹配就停止。
 
 ```sh
-shasum -a 256 dsh-qwen-studio.tgz   # macOS
-certutil -hashfile dsh-qwen-studio.tgz SHA256   # Windows
+shasum -a 256 dsh-qwen-mlx-studio.tgz   # macOS
+certutil -hashfile dsh-qwen-mlx-studio.tgz SHA256   # Windows
 ```
 
 ## 2. Apple Silicon 本机（MLX）
@@ -70,7 +70,7 @@ certutil -hashfile dsh-qwen-studio.tgz SHA256   # Windows
 1. 装 Python 3.12（`brew install python@3.12` 或 python.org 安装包），然后跑随包脚本：
 
    ```sh
-   cd ~/.dsh/profiles/desktop/node_modules/dsh-qwen-studio
+   cd ~/.dsh/profiles/desktop/node_modules/dsh-qwen-mlx-studio
    sh scripts/setup-local.sh ~/qwen-studio-venv
    ```
 
@@ -113,9 +113,9 @@ python3 scripts/setup-image-python.py
 # 1) 建目录
 New-Item -ItemType Directory -Force C:\qwen | Out-Null
 # 2) 复制网关脚本与自定义节点（从已安装的插件包里）
-Copy-Item "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-qwen-studio\backend\qwen_gateway.py" C:\qwen\
-Copy-Item "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-qwen-studio\backend\qwen_workflow.py" C:\qwen\
-Copy-Item -Recurse "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-qwen-studio\backend\comfy_nodes\dsh_qwen" C:\qwen\ComfyUI\custom_nodes\
+Copy-Item "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-qwen-mlx-studio\backend\qwen_gateway.py" C:\qwen\
+Copy-Item "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-qwen-mlx-studio\backend\qwen_workflow.py" C:\qwen\
+Copy-Item -Recurse "$env:USERPROFILE\.dsh\profiles\desktop\node_modules\dsh-qwen-mlx-studio\backend\comfy_nodes\dsh_qwen" C:\qwen\ComfyUI\custom_nodes\
 # 3) 虚拟环境（ComfyUI 依赖装在同一个环境里）
 python -m venv C:\qwen\venv
 C:\qwen\venv\Scripts\pip.exe install -r C:\qwen\ComfyUI\requirements.txt

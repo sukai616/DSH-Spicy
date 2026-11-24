@@ -1,12 +1,12 @@
 # DSH-Spicy · Agent 安装、配置与使用
 
-包名 `dsh-qwen-studio`。安装后打开左侧「创作」，切换图像或视频；多镜头影片在对话中制作。安装前可以直接阅读下面的技能，安装后由 DSH 注册。
+包名 `dsh-qwen-mlx-studio`（显示名「图像工坊」）。安装后打开左侧「图像工坊」，切换图像或视频；多镜头影片在对话中制作。这是面向 Apple Silicon 本机 MLX 的独立分叉，默认 8 步 Turbo、尺寸上限 4096，与上游 `dsh-qwen-mlx-studio` 不共享版本线。安装前可以直接阅读下面的技能，安装后由 DSH 注册。
 
 ## 旧插件迁移与回退
 
 1. 用 DSH 的 `plugin_manager`、action=list_bundles 列出当前 profile。记录 Qwen 和两个旧 H3 bundle 的版本与启用状态。确认当前任务已结束；记录未完成工程 ID。保留原配置与数据。
-2. 从项目市场或 Release 安装编译后的 dsh-qwen-studio。若旧的 dsh-h3-video 或 dsh-h3-film-local 仍在所选 bundle 清单，合并包分别让它们提供单镜或长片工具。升级完成后，用 set_bundle 将实际存在的这两个旧包 enabled 设为 false。使用 bundle 开关，勿只关闭其中的 plugin entry。
-3. 按宿主提示重新加载合并包或在合适时手动重开 DSH。验证只出现一个「创作」入口，能看到 qwen_generate_image、h3_generate_video、h3_film_create 和下面五个技能。旧工具名、视频 API、连接、角色库、工程与媒体目录继续使用。DSH 启用状态发生变化后要重新加载，运行中的插件在加载时读取 bundle 清单。
+2. 从项目市场或 Release 安装编译后的 dsh-qwen-mlx-studio。若旧的 dsh-h3-video 或 dsh-h3-film-local 仍在所选 bundle 清单，合并包分别让它们提供单镜或长片工具。升级完成后，用 set_bundle 将实际存在的这两个旧包 enabled 设为 false。使用 bundle 开关，勿只关闭其中的 plugin entry。
+3. 按宿主提示重新加载合并包或在合适时手动重开 DSH。验证只出现一个「图像工坊」入口，能看到 qwen_generate_image、h3_generate_video、h3_film_create 和下面五个技能。旧工具名、视频 API、连接、角色库、工程与媒体目录继续使用。DSH 启用状态发生变化后要重新加载，运行中的插件在加载时读取 bundle 清单。
 4. 旧长片配置中的 bridge 如指向原自定义文件则继续使用。希望使用包内版本时，先备份自己的 film.json，再仅移除 bridge 字段，保留原 Python、data_home、project_root、volume、voice、path。新装用户无需设置 bridge。
 5. 回退时恢复之前的 Qwen 版本及旧 bundle 原有启用状态，再重新加载。保留现有工程、模型权重、附件及配置。
 
@@ -34,7 +34,7 @@
 - 推荐在 DSH 自定义插件市场添加 `https://kingcharleslzy-ai.github.io/DSH-Spicy/index.json`；共享市场 `https://kingcharleslzy-ai.github.io/dsh-purge/index.json` 也收录本插件。
 - 市场启用方法：插件 → 实验性插件 → 自定义插件市场 → 发现 → 添加索引源。市场安装前仍由 DSH 显示确认。索引使用固定提交的预编译快照，不在用户电脑上构建前端。
 - 仓库更名后，从 3.0.1 或更早版本升级时，通过新索引或 Release TGZ 原位安装一次；3.0.2 起内置更新器使用新地址。
-- 手动下载：从 Releases 取 `dsh-qwen-studio-<版本>.tgz` 和 `SHA256SUMS.txt`，核对该文件对应的一行 SHA256。校验文件还列出了固定下载名的同内容安装包，不能因没有下载另一个别名文件就忽略真正的校验失败。
+- 手动下载：从 Releases 取 `dsh-qwen-mlx-studio-<版本>.tgz` 和 `SHA256SUMS.txt`，核对该文件对应的一行 SHA256。校验文件还列出了固定下载名的同内容安装包，不能因没有下载另一个别名文件就忽略真正的校验失败。
 - 安装命令：`dsh plugin --profile <实际profile> add <安装包绝对路径>`。macOS 没有全局 dsh 时，使用 `/bin/sh "/Applications/DeepSeek Harness.app/Contents/Resources/runtime/cli/bin/dsh" plugin --profile <实际profile> add <安装包绝对路径>`。
 - 预编译 tgz 安装不需要全局 npm、tsc 或 Git；市场使用 Git 来源，因此需有可用的 Git（没有时用 tgz）。模型权重另行准备。源码开发才需要 Node.js 和 `npm ci --ignore-scripts && npm run check`。
 - 桌面 Agent 可用 `plugin_manager` 的 `install_bundle` 安装已校验的本地 TGZ。随后检查当前会话是否已注册图像和视频工具，已就绪就继续部署。宿主提示必须重新加载时由用户选择合适的时机。

@@ -18,7 +18,7 @@ Create NSFW images, clips with sound and multi-shot films on your own hardware. 
 
 ## Install the compiled plugin
 
-Use DSH 0.2.2-rc.1 or later. Add the [native market index](https://kingcharleslzy-ai.github.io/DSH-Spicy/index.json) under Plugins → Discover → Index sources. Install `dsh-qwen-studio`. Alternatively, download the TGZ and checksum list from the [latest release](https://github.com/kingcharleslzy-ai/DSH-Spicy/releases/latest), verify the matching checksum, and run `dsh plugin --profile desktop add /absolute/path/to/dsh-qwen-studio.tgz` for that profile.
+Use DSH 0.2.2-rc.1 or later. Add the [native market index](https://kingcharleslzy-ai.github.io/DSH-Spicy/index.json) under Plugins → Discover → Index sources. Install `dsh-qwen-mlx-studio`. Alternatively, download the TGZ and checksum list from the [latest release](https://github.com/kingcharleslzy-ai/DSH-Spicy/releases/latest), verify the matching checksum, and run `dsh plugin --profile desktop add /absolute/path/to/dsh-qwen-mlx-studio.tgz` for that profile.
 
 For version 3.0.1 or earlier, upgrade in place once using the new index or release TGZ. The earlier built-in updater checks the old repository address. Version 3.0.2 uses the renamed repository. If a standalone H3 video or film bundle is selected, let active calls finish, disable those two bundles, then reload the combined plugin. Keep your data home, models, connection settings, project directory, character library and attachments. During transition the selected standalone bundles continue to own their tools. [Agent installation and migration](AGENTS.md)
 

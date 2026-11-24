@@ -22,7 +22,7 @@ Windows 的工作区和 DSH 数据目录可能位于不同磁盘。按空间和�
 
 **Windows 首装从这里开始**：[Windows 双模型部署](../../docs/WINDOWS-LOCAL.md)。同机 H3 用 local，图像用回环网关。运行 DSH 的 Windows 机器必须自己完成最后的生成与回放。
 
-1. **安装与迁移**。DSH 至少 0.2.2-rc.1。用宿主 plugin_manager 的 list_bundles 查包名；安装项目市场的编译版本，或校验 Release TGZ 后使用当前 profile 的包管理器。桌面版优先使用其插件管理页。若之前同时启用 dsh-h3-video 或 dsh-h3-film-local，等待进行中的调用结束，分别停用这两个独立 bundle，启用新版 dsh-qwen-studio 并重新加载。保留旧连接、模型、角色库、工程和附件供续作。失败时可重新启用原包并回退 Qwen 的版本。详细顺序在 AGENTS.md。
+1. **安装与迁移**。DSH 至少 0.2.2-rc.1。用宿主 plugin_manager 的 list_bundles 查包名；安装项目市场的编译版本，或校验 Release TGZ 后使用当前 profile 的包管理器。桌面版优先使用其插件管理页。若之前同时启用 dsh-h3-video 或 dsh-h3-film-local，等待进行中的调用结束，分别停用这两个独立 bundle，启用新版 dsh-qwen-mlx-studio 并重新加载。保留旧连接、模型、角色库、工程和附件供续作。失败时可重新启用原包并回退 Qwen 的版本。详细顺序在 AGENTS.md。
 2. **Mac 本机图像**。Apple Silicon 用 Python 3.12 执行 scripts/setup-local.sh，设置脚本打印的解释器。按 docs/SETUP.md 准备 MFLUX 可读的完整 Qwen Image 2.1 checkpoint 和需要的共享组件，检查 processor、视觉编码器和权重分片，再配置模型路径。用 qwen_image_connection status 和 qwen_image_resources 读取真实状态。
 3. **本机或远程 NVIDIA 图像**。按 docs/REMOTE.md 安装专用 ComfyUI、三个基础权重及所需可选权重；复制网关、工作流和自定义节点，用自己的私有配置启动网关。DSH 图像选远程模式，即使 GPU 在同机；同机用回环 /v1 地址。异机使用已配公钥的 SSH 别名或用户部署的受保护网关。读取能力接口，再确认当前后端支持所需编辑模式。
 4. **本机或远程视频 GPU**。按 docs/H3-SETUP.md 在 Windows NVIDIA 主机准备 ComfyUI 和工作流要求的权重，用随包 scripts/check-h3-models.py 对实际 /object_info 核对节点和文件名。DSH 与 GPU 同在 Windows 时 transport=local，异机时 transport=ssh。两种模式都使用 GPU 主机的 Python 和 studioDir 的绝对路径。H3 直接使用自己的 ComfyUI；Qwen 的 /v1 地址只用于图像。缺少 Turbo LoRA 或 Ref2VA 时只报告相应档位，不覆盖其他可用档位。

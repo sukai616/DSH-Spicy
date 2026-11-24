@@ -59,10 +59,10 @@
 
 ## 安装
 
-DSH **0.2.2-rc.1 或更新版本**。在「插件 → 发现 → 索引源」添加 [本项目市场索引](https://kingcharleslzy-ai.github.io/DSH-Spicy/index.json)，选择 **DSH-Spicy**（安装包 `dsh-qwen-studio`）。也可以从 Release 下载 [预编译 TGZ](https://github.com/kingcharleslzy-ai/DSH-Spicy/releases/latest/download/dsh-qwen-studio.tgz)，与 [SHA256SUMS.txt](https://github.com/kingcharleslzy-ai/DSH-Spicy/releases/latest/download/SHA256SUMS.txt) 中同名文件核对，再从实际 profile 安装。桌面版可用插件管理器，CLI 示例：
+DSH **0.2.2-rc.1 或更新版本**。在「插件 → 发现 → 索引源」添加 [本项目市场索引](https://kingcharleslzy-ai.github.io/DSH-Spicy/index.json)，选择 **DSH-Spicy**（安装包 `dsh-qwen-mlx-studio`）。也可以从本项目 Release 下载 `dsh-qwen-mlx-studio-4.0.0.tgz`，校验 SHA256 后从实际 profile 安装。桌面版 profile 禁止 `dsh plugin` 子命令，请改 `package.json` 依赖 + `pnpm install`。桌面版可用插件管理器，CLI 示例：
 
 ```sh
-dsh plugin --profile desktop add /absolute/path/to/dsh-qwen-studio.tgz
+pnpm install   # 桌面 profile：先在 package.json 依赖里指向本地 tgz
 ```
 
 **从 3.0.1 或更早版本升级**：在上面的新市场索引安装一次，或使用 Release 的 TGZ 原位升级。旧版内置更新器校验旧仓库地址；从 3.0.2 起会检查新仓库。已有独立视频或长片插件时，等任务结束，停用旧的 `dsh-h3-video`、`dsh-h3-film-local` 两个 bundle，再重新加载创作插件。图库、预设、视频、角色卡和未完成工程沿用原位置。兼容过渡与回退见 [迁移说明](AGENTS.md#旧插件迁移与回退)。

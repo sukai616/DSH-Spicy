@@ -23,7 +23,7 @@
 
 ## 3.0.1 — 2026-11-13
 
-- 插件更名为 DSH-Spicy。DSH 侧栏、插件列表、市场与安装文档使用新名称；安装包仍为 `dsh-qwen-studio`，原安装可直接更新。
+- 插件更名为 DSH-Spicy。DSH 侧栏、插件列表、市场与安装文档使用新名称；安装包仍为 `dsh-qwen-mlx-studio`，原安装可直接更新。
 
 ## 3.0.0 — 2026-11-13
 
@@ -199,7 +199,7 @@
 
 ## 2.2.0 — 2026-10-16
 
-First independently maintained public release as `dsh-qwen-studio` (display name: 图像).
+First independently maintained public release as `dsh-qwen-mlx-studio` (display name: 图像).
 
 - Direct creation workspace in the left navigation, without a chat-model intermediary.
 - In-place progress and results, reference-based variations, parameter recall and removable preview history.

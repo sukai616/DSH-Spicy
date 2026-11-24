@@ -20,7 +20,7 @@
 
 ## 开发阶段的本机安装记录
 
-界面验收阶段仅替换 `dsh-qwen-studio/lib/client.js` 和对应 source map。公开版本已把通用宿主与 worker 改动回收到源码，发布包包含完整前后端。保留用户其他会话对宿主 `lib/index.js`、独立 Python 服务及模型配置所作的改动。
+界面验收阶段仅替换 `dsh-qwen-mlx-studio/lib/client.js` 和对应 source map。公开版本已把通用宿主与 worker 改动回收到源码，发布包包含完整前后端。保留用户其他会话对宿主 `lib/index.js`、独立 Python 服务及模型配置所作的改动。
 
 ## 验证
 
