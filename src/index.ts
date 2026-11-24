@@ -19,7 +19,7 @@ import {
 } from "./storage.js";
 import { registerTools } from "./tools.js";
 import { API, active } from "./shared.js";
-import { receiveAsset } from "./assets.js";
+import { deleteInputAsset, receiveAsset } from "./assets.js";
 import { resolveConfig } from "./resolved-config.js";
 import { listResources } from "./resources.js";
 import {
@@ -28,23 +28,10 @@ import {
   loadPreset,
   exportPresets,
 } from "./presets.js";
-import { apply as applyVideo } from "dsh-qwen-mlx-studio/video-host";
-import { apply as applyFilm } from "dsh-qwen-mlx-studio/film-host";
 import { bundledSkill } from "./skill.js";
 import { sshOptions } from "./remote-lifecycle.js";
 import { registerConnectionTool, type ConnectionSettings } from "./connection-tools.js";
-import { installedPaths } from "./updates.js";
-import { readFileSync } from "node:fs";
 
-// A selected standalone bundle owns its original tools until the user migrates.
-function selectedLegacyBundles() {
-  let profile: string;
-  try { profile = installedPaths().profile; }
-  catch { return { video: false, film: false }; }
-  const manifest = JSON.parse(readFileSync(join(profile, "package.json"), "utf8"));
-  const selected: string[] = manifest.dsh?.profile?.bundles ?? [];
-  return { video: selected.includes("dsh-h3-video"), film: selected.includes("dsh-h3-film-local") };
-}
 export { Config };
 export const name = "qwen-mlx-studio";
 export const inject = ["webServer", "tools", "attachments"];
@@ -82,9 +69,6 @@ export function apply(ctx: Context, config: Config = {}) {
     } catch(e) { updateError = e instanceof Error ? e.message : String(e); }
   })();
   ctx.effect(() => () => { updater?.stop(); closeGalleryIndexes(); }, "qwen-studio updates and gallery index");
-  const legacy = selectedLegacyBundles();
-  if (!legacy.video) applyVideo(ctx);
-  if (!legacy.film) applyFilm(ctx);
   registerTools(ctx, worker);
   (ctx.inject as unknown as (services: string[], callback: (owner: Context) => void) => void)(["settings"], (owner) => {
     registerConnectionTool(owner, worker, owner.get("settings") as ConnectionSettings);
@@ -98,12 +82,11 @@ export function apply(ctx: Context, config: Config = {}) {
     const skills = owner.get("skills") as {
       register(skill: object): () => void;
     };
-    for (const name of ["qwen-image", "studio-model-setup", "studio-creation", ...(!legacy.video ? ["h3-video"] : []), ...(!legacy.film ? ["h3-long-film"] : [])]) {
+    for (const name of ["qwen-image", "studio-model-setup", "studio-creation"]) {
       owner.effect(() => skills.register(bundledSkill(name)), name);
     }
   });
   for (const route of [
-    "legacy",
     "updates",
     "gallery-restore",
     "state",
@@ -132,7 +115,6 @@ export function apply(ctx: Context, config: Config = {}) {
               res.end(JSON.stringify(value));
             };
             try {
-              if (route === "legacy" && req.method === "GET") return json(200, legacy);
               if (route === "attachment" && req.method === "POST") {
                 const data = await body(req);
                 const stored = await ctx.attachments.readImage(data.attachment);
@@ -174,6 +156,12 @@ export function apply(ctx: Context, config: Config = {}) {
               }
               if (route === "resources" && req.method === "GET")
                 return json(200, await listResources(resolveConfig(current())));
+              if (route === "resources" && req.method === "POST") {
+                const data = await body(req);
+                if (data.action === "delete" && data.confirm === true)
+                  return json(200, await deleteInputAsset(dir, String(data.id ?? "")));
+                throw Error("资源操作无效；删除需要明确确认");
+              }
               if (route === "presets") {
                 const effective = resolveConfig(current());
                 if (req.method === "GET")

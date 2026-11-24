@@ -5,11 +5,12 @@ import {
   readdir,
   rm,
   mkdir,
+  stat,
   symlink,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { importAsset, inputImagePath } from "../src/assets.js";
+import { deleteInputAsset, importAsset, inputImagePath } from "../src/assets.js";
 import { imagePath, readJobs } from "../src/storage.js";
 const png = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jRZkAAAAASUVORK5CYII=",
@@ -134,5 +135,38 @@ test("aborted streams and symlinked resource directories do not leave accepted a
   } finally {
     await rm(dir, { recursive: true, force: true });
     await rm(outside, { recursive: true, force: true });
+  }
+});
+test("deleting an imported image removes only its managed folder and clears the dedupe index", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "qwen-delete-"));
+  try {
+    const asset = await importAsset(
+      dir,
+      process.env.QWEN_TEST_PYTHON || "python3",
+      "source",
+      "face.png",
+      chunks(png),
+    );
+    expect(await deleteInputAsset(dir, asset.id)).toMatchObject({
+      id: asset.id,
+      kind: "source",
+    });
+    await expect(stat(join(dir, "assets/images", asset.id))).rejects.toThrow();
+    await expect(
+      stat(join(dir, "assets/images", asset.id, "image.png")),
+    ).rejects.toThrow();
+    await expect(deleteInputAsset(dir, asset.id)).rejects.toThrow("不存在");
+    await expect(deleteInputAsset(dir, "../etc")).rejects.toThrow("无效");
+    const again = await importAsset(
+      dir,
+      process.env.QWEN_TEST_PYTHON || "python3",
+      "source",
+      "face.png",
+      chunks(png),
+    );
+    expect(again.id).not.toBe(asset.id);
+    expect(again.deduped).toBeUndefined();
+  } finally {
+    await rm(dir, { recursive: true, force: true });
   }
 });

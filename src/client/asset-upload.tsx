@@ -94,7 +94,7 @@ export function AssetUpload({
             ? ".safetensors"
             : ".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
         }
-        multiple={kind === "lora" && maxFiles > 1}
+        multiple={maxFiles > 1}
         onChange={(e) => {
           const files = Array.from(e.target.files ?? []);
           e.target.value = "";

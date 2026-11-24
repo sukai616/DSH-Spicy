@@ -11,7 +11,11 @@ test("remote mode keeps the shared idle control visible and saves it without rep
   environment();
   const value = { connectionMode: "remote" as const, remoteSshHost: "test-gpu", remoteBaseURL: "http://127.0.0.1:19488/v1", localMfluxIdleMinutes: 10 };
   const mutations: any[] = [];
-  vi.stubGlobal("fetch", vi.fn(async () => ({ ok: true, json: async () => ({ effective: resolveConfig(value), health: { status: "remote", loaded: false } }) })));
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    if (String(url).endsWith("/resources"))
+      return { ok: true, json: async () => ({ items: [], warnings: [] }) };
+    return { ok: true, json: async () => ({ effective: resolveConfig(value), health: { status: "remote", loaded: false } }) };
+  }));
   const scope: any = { getSnapshot: () => ({ value, user: value, revision: 9 }), subscribe: () => () => {}, mutate: async (ops: any[]) => { mutations.push(ops); return true; } };
   let tree: any;
   try {
@@ -76,6 +80,8 @@ test("configuration form displays resolved inherited paths, saves only edited fi
   vi.stubGlobal(
     "fetch",
     vi.fn(async (_url: string, init: any) => {
+      if (String(_url).endsWith("/resources"))
+        return { ok: true, json: async () => ({ items: [], warnings: [] }) };
       const raw = JSON.parse(init?.body ?? "{}");
       return {
         ok: true,

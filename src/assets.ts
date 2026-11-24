@@ -45,6 +45,32 @@ export async function inputImagePath(dir: string, id: string) {
     throw error;
   }
 }
+/** Remove one imported image resource. Only managed folders are reachable. */
+export async function deleteInputAsset(dir: string, id: string) {
+  if (!imageId(id)) throw Error("图片ID无效");
+  const root = await realpath(dir),
+    folder = join(root, "assets", "images", id);
+  let actual: string;
+  try {
+    actual = await realpath(folder);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT")
+      throw Error("资源不存在或已删除");
+    throw error;
+  }
+  if (actual !== folder) throw Error("资源路径无效");
+  let meta: InputAsset;
+  try {
+    meta = JSON.parse(await readFile(join(folder, "asset.json"), "utf8"));
+  } catch {
+    throw Error("输入资源记录无效");
+  }
+  if (meta.id !== id || !["source", "control", "mask"].includes(meta.kind))
+    throw Error("输入资源记录无效");
+  await rm(folder, { recursive: true, force: true });
+  imageIndexCache = undefined;
+  return { id, name: meta.name, kind: meta.kind };
+}
 async function managedDirectory(root: string, ...parts: string[]) {
   const base = join(root, "assets");
   await mkdir(base, { recursive: true, mode: 0o700 });

@@ -21,6 +21,7 @@ import { request, imageURL, download, lastSnapshot, cache, pollSnapshot, APIErro
 import { CreationPreview } from "./creation-preview.js";
 import { defaultDraft } from "./preset-bar.js";
 import { AdvancedSettings } from "./advanced-settings.js";
+import { ResourceManager } from "./resource-manager.js";
 import { ParameterHelp, STEPS_HELP, SEED_HELP } from "./parameter-help.js";
 import {
   usePrivacyGallery,
@@ -67,6 +68,8 @@ export function Studio() {
   const privacy = usePrivacyGallery();
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const closeAdvanced = useCallback(() => setAdvancedOpen(false), []);
+  const [resourcesOpen, setResourcesOpen] = useState(false);
+  const closeResources = useCallback(() => setResourcesOpen(false), []);
   const [draft, setDraft] = useState<Draft>(readDraft),
     [snapshot, setSnapshot] = useState<Snapshot | undefined>(lastSnapshot),
     [error, setError] = useState(""),
@@ -482,6 +485,7 @@ export function Studio() {
           {status}
         </div>
       </header>
+      {resourcesOpen && <ResourceManager onClose={closeResources} />}
       {health?.connection_error && <div role="status" className="q2-alert">{health.connection_error}。模型卸载未确认，SSH 连接已保留并会重试。</div>}
       {connectionError && (
         <div role="status" className="q2-alert">
@@ -827,6 +831,7 @@ export function Studio() {
             >
               {selecting ? "完成" : "选择"}
             </button>
+            <button onClick={() => setResourcesOpen(true)}>资源库</button>
           </div>
           {privacy && filter === "private" && (
             <p className="q2-gallery-hint">

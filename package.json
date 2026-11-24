@@ -24,9 +24,6 @@
       "default": "./lib/client.js"
     },
     "./package.json": "./package.json",
-    "./video-host": "./video/index.js",
-    "./film-host": "./film/index.js",
-    "./video-client": "./video/client.js",
     "./locale/*.json": "./locale/*.json"
   },
   "files": [
@@ -39,7 +36,6 @@
     "backend/server.py",
     "backend/normalize_image.py",
     "scripts/setup-local.sh",
-    "skills/**/*.md",
     "docs/*.md",
     "NOTICE",
     "CHANGELOG.md",
@@ -56,17 +52,10 @@
     "scripts/npm-command.mjs",
     "scripts/setup-image-python.py",
     "docs/recipes/*.md",
-    "video/*.js",
-    "video/worker.py",
-    "video/workflows/*.json",
-    "video/vendor/**/*",
-    "film/*.js",
-    "film/**/*.py",
-    "film/upstream_h3studio/LICENSE",
-    "film/upstream_h3studio/REVISION",
-    "film/requirements.txt",
-    "scripts/check-h3-models.py",
-    "locale/*.json"
+    "locale/*.json",
+    "skills/qwen-image/**/*.md",
+    "skills/studio-creation/**/*.md",
+    "skills/studio-model-setup/**/*.md"
   ],
   "dsh": {
     "bundle": {
