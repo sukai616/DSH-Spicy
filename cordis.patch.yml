@@ -1,4 +1,4 @@
 - insert:
-    - id: qwen-studio
-      name: dsh-qwen-studio
+    - id: qwen-mlx-studio
+      name: dsh-qwen-mlx-studio
       config: {}

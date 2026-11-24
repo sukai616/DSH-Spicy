@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "DSH-Spicy",
-    "description": "完美适配 purge 的 nsfw content creation 插件",
+    "title": "图像工坊",
+    "description": "本地 Apple Silicon 图像工作台：Turbo 8 步、实测参数、LoRA 预设与按日时间轴图库",
     "detail": "README.md"
   }
 }

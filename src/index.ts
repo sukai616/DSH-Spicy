@@ -28,8 +28,8 @@ import {
   loadPreset,
   exportPresets,
 } from "./presets.js";
-import { apply as applyVideo } from "dsh-qwen-studio/video-host";
-import { apply as applyFilm } from "dsh-qwen-studio/film-host";
+import { apply as applyVideo } from "dsh-qwen-mlx-studio/video-host";
+import { apply as applyFilm } from "dsh-qwen-mlx-studio/film-host";
 import { bundledSkill } from "./skill.js";
 import { sshOptions } from "./remote-lifecycle.js";
 import { registerConnectionTool, type ConnectionSettings } from "./connection-tools.js";
@@ -46,7 +46,7 @@ function selectedLegacyBundles() {
   return { video: selected.includes("dsh-h3-video"), film: selected.includes("dsh-h3-film-local") };
 }
 export { Config };
-export const name = "qwen-studio";
+export const name = "qwen-mlx-studio";
 export const inject = ["webServer", "tools", "attachments"];
 async function body(req: IncomingMessage, limit = 65536) {
   const chunks: Buffer[] = [];

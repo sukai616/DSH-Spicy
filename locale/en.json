@@ -1,7 +1,7 @@
 {
   "meta": {
-    "title": "DSH-Spicy",
-    "description": "An NSFW content creation plugin for purge.",
+    "title": "Image Studio",
+    "description": "Local Apple Silicon image studio: 8-step Turbo, measured presets, LoRA styles and a day-grouped gallery",
     "detail": "README.en.md"
   }
 }

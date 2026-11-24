@@ -9,7 +9,7 @@ import { runCommand } from "./commands.js";
 import { satisfies } from "semver";
 import { atomicJSON } from "./storage.js";
 export const REPO = "kingcharleslzy-ai/DSH-Spicy";
-export const PACKAGE = "dsh-qwen-studio";
+export const PACKAGE = "dsh-qwen-mlx-studio";
 export interface UpdatePreferences { autoCheck: boolean; autoInstall: boolean; intervalHours: number }
 export interface UpdateState { checkedAt?: string; availableVersion?: string; hasUpdate?: boolean; error?: string; deferred?: string; pendingVersion?: string; restartRequired?: boolean; backupId?: string }
 export interface Release { version: string; url: string; sha256: string }

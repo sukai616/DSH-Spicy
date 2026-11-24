@@ -10,13 +10,13 @@ const CLIENT_EXTERNALS = [
 ];
 
 const host: UserConfig = {
-  name: "dsh-qwen-studio",
+  name: "dsh-qwen-mlx-studio",
   entry: ["lib/types/index.js"],
   outDir: "lib",
   format: ["esm"],
   platform: "node",
   // Resolve host services from DSH instead of bundling another host runtime.
-  external: [/^@deepseek-ai\//, /^dsh-qwen-studio\/(video|film)-host$/],
+  external: [/^@deepseek-ai\//, /^dsh-qwen-mlx-studio\/(video|film)-host$/],
   target: "es2024",
   fixedExtension: false,
   dts: false,
@@ -24,7 +24,7 @@ const host: UserConfig = {
 };
 
 const client: UserConfig = {
-  name: "dsh-qwen-studio/client",
+  name: "dsh-qwen-mlx-studio/client",
   entry: { client: "lib/types/client/index.js" },
   outDir: "lib",
   format: "cjs",
@@ -49,11 +49,11 @@ const client: UserConfig = {
   outputOptions: {
     entryFileNames: "client.js",
     banner:
-      'window.__ModuleLoader__.load({ id: "dsh-qwen-studio", factory: (require) => {',
+      'window.__ModuleLoader__.load({ id: "dsh-qwen-mlx-studio", factory: (require) => {',
     footer: "return module.exports; } });",
     intro: "var module = { exports: {} }; var exports = module.exports;",
   },
 };
 
-const maintenance: UserConfig = { ...host, name: "dsh-qwen-studio/maintenance", entry: ["lib/types/maintenance.js"] };
+const maintenance: UserConfig = { ...host, name: "dsh-qwen-mlx-studio/maintenance", entry: ["lib/types/maintenance.js"] };
 export default [host, maintenance, client];

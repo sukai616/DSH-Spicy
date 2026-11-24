@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { bundledSkill } from "../src/skill.js";
-import { apply as video } from "dsh-qwen-studio/video-host";
-import { apply as film } from "dsh-qwen-studio/film-host";
+import { apply as video } from "dsh-qwen-mlx-studio/video-host";
+import { apply as film } from "dsh-qwen-mlx-studio/film-host";
 
 test("combined video and film tools share the registered shot generator", async () => {
   const tools = new Map<string, any>();

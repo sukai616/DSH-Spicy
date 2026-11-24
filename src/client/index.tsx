@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { VideoPage, installVideoPlayers } from "dsh-qwen-studio/video-client";
+import { VideoPage, installVideoPlayers } from "dsh-qwen-mlx-studio/video-client";
 import { Images } from "lucide-react";
 import type {} from "@deepseek-ai/dsh-client-ui-slots";
 import type { Context } from "@deepseek-ai/cordis";
@@ -44,7 +44,7 @@ export function apply(ctx: Context) {
     register(
       {
         name: "plugins.bundle.config",
-        key: "dsh-qwen-studio",
+        key: "dsh-qwen-mlx-studio",
         inject: () => ({ scope }),
       },
       Settings,
@@ -109,7 +109,7 @@ export function apply(ctx: Context) {
         name: "sidebar.panellist",
         id: "qwen-studio",
         order: 10,
-        label: "创作",
+        label: "图像工坊",
       },
       StudioIcon,
     ),
@@ -121,7 +121,7 @@ function StudioIcon({ size = 16 }: { size?: number }) {
 function StudioPage() {
   const [mode, setMode] = useState(() => localStorage.getItem("qwen-studio-medium") === "video" ? "video" : "image");
   return <div style={{height: "100%", display: "flex", flexDirection: "column", minHeight: 0}}>
-    <nav aria-label="创作类型" style={{display: "flex", gap: 6, padding: "max(8px,var(--dsh-frame-top-clearance,0px)) 16px 8px", borderBottom: "1px solid color-mix(in srgb,currentColor 15%,transparent)"}}>
+    <nav aria-label="图像工坊" style={{display: "flex", gap: 6, padding: "max(8px,var(--dsh-frame-top-clearance,0px)) 16px 8px", borderBottom: "1px solid color-mix(in srgb,currentColor 15%,transparent)"}}>
       {([["image", "图像"], ["video", "视频"]] as const).map(([id, label]) =>
         <button key={id} aria-pressed={mode === id} onClick={() => { setMode(id); localStorage.setItem("qwen-studio-medium", id); }}
           style={{cursor: "pointer", borderRadius: 5, padding: "4px 14px", color: mode === id ? "Canvas" : "inherit", background: mode === id ? "CanvasText" : "transparent", border: "1px solid color-mix(in srgb,currentColor 25%,transparent)"}}>{label}</button>)}

@@ -451,7 +451,7 @@ export function Studio() {
     allSelected =
       visible.length > 0 && visible.every((j) => selection.has(j.id));
   return (
-    <section className="q2 q2-studio" aria-label="图像">
+    <section className="q2 q2-studio" aria-label="图像工坊">
       <style>{STYLE}</style>
       <header className="q2-brand">
         <h2>图像</h2>

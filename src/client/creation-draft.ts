@@ -39,7 +39,7 @@ export const draftDefaults: CreationDraft = {
   negativePrompt: "",
   guidance: 1,
   scheduler: "linear",
-  size: "1024x1024",
+  size: "1536x2048",
   steps: 8,
   seed: "",
   sourceId: "",
