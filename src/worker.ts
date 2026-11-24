@@ -283,9 +283,7 @@ export class Worker {
       data = local;
     }
     const referenceMode = (data as Record<string, unknown>)?.reference_mode;
-    const sourceIds = (data as Record<string, unknown>)?.source_image_ids;
-    if (path === "/v1/jobs" && Array.isArray(sourceIds) && sourceIds.length && this.mode() !== "remote")
-      throw Error("多图参考仅支持已更新的远程 Qwen 网关；本机请用单张 source_image_id");
+    // 本机后端已支持 source_image_ids（reference_0..N），不再拦截多图参考。
     if (path === "/v1/jobs" && referenceMode === "edit" && this.mode() === "local") {
       const support = await this.referenceEditing();
       if (!support.supported) throw Error(support.reason || "当前本机 MFLUX 或模型不支持原生参考编辑；不会自动切换后端");
