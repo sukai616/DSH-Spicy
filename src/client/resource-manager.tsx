@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, RefreshCw, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, Copy, RefreshCw, Trash2 } from "lucide-react";
 import type { AssetKind } from "../assets.js";
 import type { Resource, ResourceCatalog } from "../resources.js";
 import { AssetUpload } from "./asset-upload.js";
@@ -44,6 +44,7 @@ export function ResourceManager({ onClose }: { onClose(): void }) {
     [busy, setBusy] = useState(false),
     [pending, setPending] = useState<Resource | null>(null),
     [importKind, setImportKind] = useState<AssetKind>("source"),
+    [copied, setCopied] = useState(""),
     [loaded, setLoaded] = useState(false);
   const refresh = useCallback(
     () =>
@@ -65,6 +66,15 @@ export function ResourceManager({ onClose }: { onClose(): void }) {
     of = (kind: string) => items.filter((r) => r.kind === kind),
     loras = of("lora"),
     total = items.reduce((sum, r) => sum + r.bytes, 0);
+  async function copyId(resource: Resource) {
+    try {
+      await navigator.clipboard.writeText(resource.id);
+      setCopied(resource.id);
+      setTimeout(() => setCopied((c) => (c === resource.id ? "" : c)), 1400);
+    } catch {
+      setError("无法写入剪贴板；请手动复制 ID：" + resource.id);
+    }
+  }
   async function remove(resource: Resource) {
     setBusy(true);
     setError("");
@@ -180,6 +190,15 @@ export function ResourceManager({ onClose }: { onClose(): void }) {
                           <span title={resource.name}>{resource.name}</span>
                         </span>
                         <small className="q2-muted">{size(resource.bytes)}</small>
+                        <button
+                          type="button"
+                          aria-label={"复制 " + resource.name + " 的资源 ID"}
+                          title={(copied === resource.id ? "已复制 " : "复制 ID ") + resource.id}
+                          disabled={busy}
+                          onClick={() => void copyId(resource)}
+                        >
+                          {copied === resource.id ? <Check /> : <Copy />}
+                        </button>
                         <button
                           type="button"
                           aria-label={"删除 " + resource.name}
