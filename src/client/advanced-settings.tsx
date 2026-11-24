@@ -8,6 +8,80 @@ import { request } from "./api.js";
 import type { ResourceCatalog } from "../resources.js";
 import { imageURL } from "./api.js";
 import { draftDefaults, type CreationDraft } from "./creation-draft.js";
+
+/** 内置 LoRA 风格预设：文件名 → 推荐权重。查找时按文件名子串匹配。 */
+const LORA_STYLES = [
+  {
+    id: "real",
+    label: "纪实真实",
+    hint: "毛孔雀斑最自然（grain 3.68）。叠 turbo8@0.5 + anything2real@0.3。",
+    match: (loras: CreationDraft["loras"]) =>
+      loras.some((l) => /anything2real/i.test(l.path)),
+    pick: (catalog: { name: string; path?: string }[], current: CreationDraft["loras"]) => {
+      const want = [
+        { re: /turbo8/i, scale: 0.5 },
+        { re: /anything2real/i, scale: 0.3 },
+      ];
+      return want
+        .map(({ re, scale }) => {
+          const hit = catalog.find((r) => r.path && re.test(r.path));
+          return hit?.path ? { path: hit.path, name: hit.name, scale } : null;
+        })
+        .filter((v): v is NonNullable<typeof v> => Boolean(v))
+        .concat(current.filter((l) => !want.some((w) => w.re.test(l.path))))
+        .slice(0, 8);
+    },
+  },
+  {
+    id: "commercial",
+    label: "商业锐利",
+    hint: "边缘锐利通透（edge 7.22 最高），适合产品、建筑、杂志硬照。",
+    match: (loras: CreationDraft["loras"]) =>
+      loras.some((l) => /photo-aesthetics/i.test(l.path)),
+    pick: (catalog: { name: string; path?: string }[], current: CreationDraft["loras"]) => {
+      const want = [
+        { re: /turbo8/i, scale: 0.3 },
+        { re: /photo-aesthetics/i, scale: 0.5 },
+      ];
+      return want
+        .map(({ re, scale }) => {
+          const hit = catalog.find((r) => r.path && re.test(r.path));
+          return hit?.path ? { path: hit.path, name: hit.name, scale } : null;
+        })
+        .filter((v): v is NonNullable<typeof v> => Boolean(v))
+        .concat(current.filter((l) => !want.some((w) => w.re.test(l.path))))
+        .slice(0, 8);
+    },
+  },
+  {
+    id: "clean",
+    label: "干净美颜",
+    hint: "皮肤干净无瑕（grain 2.34 最低），适合美妆护肤、网红精修、ins 风。",
+    match: (loras: CreationDraft["loras"]) =>
+      loras.some((l) => /casual-phone/i.test(l.path)),
+    pick: (catalog: { name: string; path?: string }[], current: CreationDraft["loras"]) => {
+      const want = [
+        { re: /turbo8/i, scale: 0.5 },
+        { re: /casual-phone/i, scale: 0.5 },
+      ];
+      return want
+        .map(({ re, scale }) => {
+          const hit = catalog.find((r) => r.path && re.test(r.path));
+          return hit?.path ? { path: hit.path, name: hit.name, scale } : null;
+        })
+        .filter((v): v is NonNullable<typeof v> => Boolean(v))
+        .concat(current.filter((l) => !want.some((w) => w.re.test(l.path))))
+        .slice(0, 8);
+    },
+  },
+  {
+    id: "none",
+    label: "清除 LoRA",
+    hint: "移除全部 LoRA。插画、二次元等风格不应叠加真实感 LoRA。",
+    match: (loras: CreationDraft["loras"]) => loras.length === 0,
+    pick: () => [],
+  },
+] as const;
 function SelectedImage({
   id,
   name,
@@ -197,6 +271,22 @@ export function AdvancedSettings({
                 void refreshResources();
               }}
             />
+            <div className="q2-lora-presets" aria-label="LoRA 风格预设">
+              {LORA_STYLES.map((style) => (
+                <button
+                  key={style.id}
+                  disabled={disabled}
+                  title={style.hint}
+                  aria-pressed={style.match(draft.loras)}
+                  onClick={() => {
+                    const next = style.pick(catalog.items.filter((r) => r.kind === "lora"), draft.loras);
+                    update({ loras: next });
+                  }}
+                >
+                  {style.label}
+                </button>
+              ))}
+            </div>
             <ResourcePicker
               resources={catalog.items}
               kind="lora"
@@ -488,15 +578,19 @@ export function AdvancedSettings({
           <h3>文本控制与采样</h3>
           <label>
             <span className="q2-field-title">负向提示词
-              <ParameterHelp name="负向提示词" text="描述希望避免的内容。普通文生图中，负向词非空且 CFG 大于 1 才启用负向分支。填写负向词但 CFG 为 1 时，插件会自动提升到 2.5，并记录实际值。" />
+              <ParameterHelp name="负向提示词" text={remote
+                ? "描述希望避免的内容。远程质量档中，负向词非空且 CFG 大于 1 才启用负向分支；填写负向词但 CFG 为 1 时插件会自动提升到 2.5。"
+                : "本机 Turbo 权重不走 CFG，任何负向词都会让生成直接失败（runs without CFG）。要避免某个元素，请改写成正面描述，例如把「不要太紧」写成「宽松、面料不贴腿」。"} />
             </span>
             <textarea
               aria-label="负向提示词"
               rows={3}
               maxLength={8000}
-              disabled={remote}
-              placeholder="描述希望避免的内容，留空时不启用负向词"
-              value={draft.negativePrompt}
+              disabled={!remote}
+              placeholder={remote
+                ? "描述希望避免的内容，留空时不启用负向词"
+                : "本机 Turbo 不支持负向词；请把要避免的内容改写成正面描述"}
+              value={remote ? draft.negativePrompt : ""}
               onChange={(e) => update({ negativePrompt: e.target.value })}
             />
           </label>
@@ -514,7 +608,7 @@ export function AdvancedSettings({
                 min="1"
                 max="10"
                 step=".1"
-                disabled={remote}
+                disabled={!remote}
                 value={draft.guidance}
                 onChange={(e) => update({ guidance: Number(e.target.value) })}
               />

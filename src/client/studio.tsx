@@ -38,9 +38,14 @@ import {
   generationPayload,
   reuseDraft,
 } from "./creation-draft.js";
+/** Turbo 蒸馏权重的设计采样点；本机只有 Turbo，步数不可调。 */
+const TURBO_STEPS = 8;
 function readDraft(): Draft {
   try {
-    return { ...defaults, ...JSON.parse(localStorage.getItem(DRAFT) ?? "{}") };
+    const merged = { ...defaults, ...JSON.parse(localStorage.getItem(DRAFT) ?? "{}") };
+    // 旧草稿存的是 base 模型的 30/40 步，放着只会让画面变脏。
+    if (merged.steps !== TURBO_STEPS) merged.steps = TURBO_STEPS;
+    return merged;
   } catch {
     return defaults;
   }
@@ -598,8 +603,10 @@ export function Studio() {
                 <div className="q2-presets" aria-label="画面比例">
                   {[
                     ["1024x1024", "1:1"],
-                    ["1344x768", "16:9"],
+                    ["1536x2048", "3:4"],
+                    ["1024x1280", "4:5"],
                     ["768x1344", "9:16"],
+                    ["1344x768", "16:9"],
                     ["1216x832", "3:2"],
                   ].map(([size, label]) => (
                     <button
@@ -634,17 +641,26 @@ export function Studio() {
                         onChange={(e) => update({ size: e.target.value })}
                       >
                         {[
-                          "1024x1024",
-                          "1344x768",
-                          "768x1344",
-                          "1216x832",
-                          "832x1216",
                           "512x512",
-                        ].map((s) => (
-                          <option value={s} key={s}>
-                            {s.replace("x", " × ")}
-                          </option>
-                        ))}
+                          "768x1344",
+                          "1024x1024",
+                          "1024x1280",
+                          "1024x1536",
+                          "1024x1792",
+                          "1216x832",
+                          "1344x768",
+                          "1536x2048",
+                          "2048x2048",
+                          "2560x2560",
+                        ].map((s) => {
+                          const [w = 0, h = 0] = s.split("x").map(Number);
+                          const mp = ((w * h) / 1e6).toFixed(2);
+                          return (
+                            <option value={s} key={s}>
+                              {`${w} × ${h}　${mp}MP`}
+                            </option>
+                          );
+                        })}
                       </select>
                     </label>
                     {snapshot?.mode === "remote" && <label>
@@ -658,14 +674,22 @@ export function Studio() {
                     </label>}
                     <label>
                       <span className="q2-field-title">
-                        质量档步数
-                        <ParameterHelp name="步数" text={STEPS_HELP} />
+                        {snapshot?.mode === "remote" ? "质量档步数" : "步数"}
+                        <ParameterHelp
+                          name="步数"
+                          text={
+                            snapshot?.mode === "remote"
+                              ? STEPS_HELP
+                              : "本机 Turbo 蒸馏权重的设计采样点为 8 步。调高不会增加真实细节，只会放大量化噪声，让皮肤出现发霉感；需要更多细节请用 LoRA 或提高分辨率。"
+                          }
+                        />
                       </span>
                       <input
                         aria-label="生成步数"
                         type="number"
                         min="1"
                         max="60"
+                        readOnly={snapshot?.mode !== "remote"}
                         value={draft.steps}
                         onChange={(e) =>
                           update({ steps: Number(e.target.value) })
