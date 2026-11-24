@@ -9,79 +9,81 @@ import type { ResourceCatalog } from "../resources.js";
 import { imageURL } from "./api.js";
 import { draftDefaults, type CreationDraft } from "./creation-draft.js";
 
-/** 内置 LoRA 风格预设：文件名 → 推荐权重。查找时按文件名子串匹配。 */
-const LORA_STYLES = [
+/** 内置 LoRA 风格预设：entries 里的正则按文件名匹配资源库中的 LoRA。 */
+interface LoraStyle {
+  id: string;
+  label: string;
+  hint: string;
+  entries: { re: RegExp; scale: number }[];
+}
+export const LORA_STYLES: LoraStyle[] = [
   {
     id: "real",
     label: "纪实真实",
-    hint: "毛孔雀斑最自然（grain 3.68）。叠 turbo8@0.5 + anything2real@0.3。",
-    match: (loras: CreationDraft["loras"]) =>
-      loras.some((l) => /anything2real/i.test(l.path)),
-    pick: (catalog: { name: string; path?: string }[], current: CreationDraft["loras"]) => {
-      const want = [
-        { re: /turbo8/i, scale: 0.5 },
-        { re: /anything2real/i, scale: 0.3 },
-      ];
-      return want
-        .map(({ re, scale }) => {
-          const hit = catalog.find((r) => r.path && re.test(r.path));
-          return hit?.path ? { path: hit.path, name: hit.name, scale } : null;
-        })
-        .filter((v): v is NonNullable<typeof v> => Boolean(v))
-        .concat(current.filter((l) => !want.some((w) => w.re.test(l.path))))
-        .slice(0, 8);
-    },
+    hint: "毛孔雀斑最自然。再次点击可取消该组合。",
+    entries: [
+      { re: /turbo8/i, scale: 0.5 },
+      { re: /anything2real/i, scale: 0.3 },
+    ],
   },
   {
     id: "commercial",
     label: "商业锐利",
-    hint: "边缘锐利通透（edge 7.22 最高），适合产品、建筑、杂志硬照。",
-    match: (loras: CreationDraft["loras"]) =>
-      loras.some((l) => /photo-aesthetics/i.test(l.path)),
-    pick: (catalog: { name: string; path?: string }[], current: CreationDraft["loras"]) => {
-      const want = [
-        { re: /turbo8/i, scale: 0.3 },
-        { re: /photo-aesthetics/i, scale: 0.5 },
-      ];
-      return want
-        .map(({ re, scale }) => {
-          const hit = catalog.find((r) => r.path && re.test(r.path));
-          return hit?.path ? { path: hit.path, name: hit.name, scale } : null;
-        })
-        .filter((v): v is NonNullable<typeof v> => Boolean(v))
-        .concat(current.filter((l) => !want.some((w) => w.re.test(l.path))))
-        .slice(0, 8);
-    },
+    hint: "边缘锐利通透，适合产品、建筑、杂志硬照。再次点击可取消该组合。",
+    entries: [
+      { re: /turbo8/i, scale: 0.3 },
+      { re: /photo-aesthetics/i, scale: 0.5 },
+    ],
   },
   {
     id: "clean",
     label: "干净美颜",
-    hint: "皮肤干净无瑕（grain 2.34 最低），适合美妆护肤、网红精修、ins 风。",
-    match: (loras: CreationDraft["loras"]) =>
-      loras.some((l) => /casual-phone/i.test(l.path)),
-    pick: (catalog: { name: string; path?: string }[], current: CreationDraft["loras"]) => {
-      const want = [
-        { re: /turbo8/i, scale: 0.5 },
-        { re: /casual-phone/i, scale: 0.5 },
-      ];
-      return want
-        .map(({ re, scale }) => {
-          const hit = catalog.find((r) => r.path && re.test(r.path));
-          return hit?.path ? { path: hit.path, name: hit.name, scale } : null;
-        })
-        .filter((v): v is NonNullable<typeof v> => Boolean(v))
-        .concat(current.filter((l) => !want.some((w) => w.re.test(l.path))))
-        .slice(0, 8);
-    },
+    hint: "皮肤干净无瑕，适合美妆护肤、网红精修。再次点击可取消该组合。",
+    entries: [
+      { re: /turbo8/i, scale: 0.5 },
+      { re: /casual-phone/i, scale: 0.5 },
+    ],
   },
   {
     id: "none",
     label: "清除 LoRA",
     hint: "移除全部 LoRA。插画、二次元等风格不应叠加真实感 LoRA。",
-    match: (loras: CreationDraft["loras"]) => loras.length === 0,
-    pick: () => [],
+    entries: [],
   },
-] as const;
+];
+
+/** 预设是否已完整生效：entries 全部命中；清除预设等价于列表为空。 */
+export function styleActive(style: LoraStyle, loras: CreationDraft["loras"]): boolean {
+  if (!style.entries.length) return loras.length === 0;
+  return style.entries.every((e) => loras.some((l) => e.re.test(l.path)));
+}
+
+/** 点击行为：已生效则取消该组合，否则套用；清除预设始终清空。 */
+export function applyStyle(
+  style: LoraStyle,
+  catalog: { name: string; path?: string }[],
+  loras: CreationDraft["loras"],
+): CreationDraft["loras"] {
+  if (!style.entries.length) return [];
+  const involves = (path: string) => style.entries.some((e) => e.re.test(path));
+  if (styleActive(style, loras)) return loras.filter((l) => !involves(l.path));
+  const picked = style.entries
+    .map(({ re, scale }) => {
+      const hit = catalog.find((r) => r.path && re.test(r.path));
+      return hit?.path ? { path: hit.path, name: hit.name, scale } : null;
+    })
+    .filter((v): v is NonNullable<typeof v> => Boolean(v));
+  // 切换风格时清掉其他预设占用的 LoRA，否则两个风格会叠在一起；
+  // 用户自己添加、不属于任何预设的文件保留。
+  const keep = loras.filter((l) => {
+    if (involves(l.path)) return false;
+    return !LORA_STYLES.some(
+      (other) =>
+        other !== style && other.entries.some((e) => e.re.test(l.path)),
+    );
+  });
+  return picked.concat(keep).slice(0, 8);
+}
 function SelectedImage({
   id,
   name,
@@ -277,11 +279,16 @@ export function AdvancedSettings({
                   key={style.id}
                   disabled={disabled}
                   title={style.hint}
-                  aria-pressed={style.match(draft.loras)}
-                  onClick={() => {
-                    const next = style.pick(catalog.items.filter((r) => r.kind === "lora"), draft.loras);
-                    update({ loras: next });
-                  }}
+                  aria-pressed={styleActive(style, draft.loras)}
+                  onClick={() =>
+                    update({
+                      loras: applyStyle(
+                        style,
+                        catalog.items.filter((r) => r.kind === "lora"),
+                        draft.loras,
+                      ),
+                    })
+                  }
                 >
                   {style.label}
                 </button>
