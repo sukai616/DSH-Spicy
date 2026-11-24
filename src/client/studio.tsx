@@ -107,9 +107,6 @@ export function Studio() {
     [selection, setSelection] = useState<Set<string>>(new Set()),
     [selecting, setSelecting] = useState(false),
     [detailId, setDetailId] = useState<string | null>(null),
-    [timeline, setTimeline] = useState(
-      () => localStorage.getItem("qwen-studio-gallery-timeline") === "1",
-    ),
     [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState<{
       action: string;
@@ -806,19 +803,6 @@ export function Studio() {
             >
               {selecting ? "完成" : "选择"}
             </button>
-            <button
-              aria-pressed={timeline}
-              title={timeline ? "切换为网格视图" : "按日期时间轴显示"}
-              onClick={() =>
-                setTimeline((on) => {
-                  const next = !on;
-                  localStorage.setItem("qwen-studio-gallery-timeline", next ? "1" : "0");
-                  return next;
-                })
-              }
-            >
-              {timeline ? "网格" : "时间轴"}
-            </button>
           </div>
           {privacy && filter === "private" && (
             <p className="q2-gallery-hint">
@@ -892,8 +876,7 @@ export function Studio() {
             </div>
           )}
           <div className="q2-gallery-scroll">
-            {timeline ? (
-              <div className="q2-timeline">
+            <div className="q2-timeline">
                 {groupByDay(visible).map((group) => {
                   const open = !collapsed.has(group.key);
                   return (
@@ -927,10 +910,7 @@ export function Studio() {
                     </section>
                   );
                 })}
-              </div>
-            ) : (
-              <div className="q2-masonry">{visible.map((job) => card(job))}</div>
-            )}
+            </div>
             {!visible.length && (
               <div className="q2-empty">
                 <Image size={28} />
@@ -1031,7 +1011,60 @@ export function Studio() {
                   </span>
                   <span>{detail.steps} 步</span>
                   <span>种子 {detail.seed}</span>
+                  {detail.elapsed_seconds ? (
+                    <span>{Math.round(detail.elapsed_seconds)} 秒</span>
+                  ) : null}
+                  {detail.image_mode && <span>{detail.image_mode}</span>}
+                  {detail.guidance !== undefined && (
+                    <span>guidance {detail.guidance}</span>
+                  )}
+                  {detail.scheduler && <span>{detail.scheduler}</span>}
+                  {detail.source && <span>{detail.source}</span>}
                 </div>
+                {(detail.lora_names?.length || detail.lora_paths?.length) && (
+                  <div className="q2-detail-extra">
+                    <span className="q2-eyebrow">LORA</span>
+                    <div className="q2-metadata">
+                      {(detail.lora_names ?? detail.lora_paths ?? []).map(
+                        (name, index) => (
+                          <span key={`${name}-${index}`}>
+                            {name.split("/").pop()} @{" "}
+                            {detail.lora_scales?.[index] ?? 1}
+                          </span>
+                        ),
+                      )}
+                    </div>
+                  </div>
+                )}
+                {(detail.source_image_id ||
+                  detail.source_image_ids?.length ||
+                  detail.change_strength !== undefined ||
+                  detail.reference_mode) && (
+                  <div className="q2-detail-extra">
+                    <span className="q2-eyebrow">参考图</span>
+                    <div className="q2-metadata">
+                      {detail.reference_mode && (
+                        <span>{detail.reference_mode}</span>
+                      )}
+                      {detail.change_strength !== undefined && (
+                        <span>强度 {detail.change_strength}</span>
+                      )}
+                      {detail.source_image_id && (
+                        <span>{detail.source_image_id.slice(0, 8)}</span>
+                      )}
+                      {(detail.source_image_ids ?? []).map((id, index) => (
+                        <span key={id}>
+                          图{index + 1} {id.slice(0, 8)}
+                        </span>
+                      ))}
+                      {detail.mask_image_id && <span>含蒙版</span>}
+                      {detail.controlnet_image_id && <span>含控制图</span>}
+                    </div>
+                  </div>
+                )}
+                {detail.error && (
+                  <p className="q2-gallery-hint">错误：{detail.error}</p>
+                )}
               </div>
             </div>
             <footer>

@@ -23,6 +23,8 @@ export const STYLE = `
 .q2-toolbar{display:flex;gap:12px;align-items:center;padding:16px 24px;flex-shrink:0}.q2-search{flex:1;min-width:60px;position:relative}
 .q2-search svg{position:absolute;left:0;top:.7em;color:var(--q-muted)}.q2 .q2-search input{width:100%;border:0;background:transparent;padding:.55em .3em .55em 1.8em}
 .q2-toolbar select{border:0;background:transparent;max-width:10em}.q2-gallery-scroll{flex:1;min-height:0;overflow:auto;padding:0 24px 24px;scrollbar-gutter:stable}
+.q2-detail-extra{display:flex;flex-direction:column;gap:4px;margin-top:10px;padding-top:10px;border-top:1px solid color-mix(in srgb,currentColor 12%,transparent)}
+.q2-detail-extra .q2-metadata{flex-wrap:wrap;gap:6px}
 .q2-timeline{display:flex;flex-direction:column;gap:14px}
 .q2-day{display:flex;flex-direction:column;gap:8px}
 .q2-day-head{display:flex;align-items:center;gap:7px;width:100%;padding:6px 2px;background:none;border:none;border-bottom:1px solid color-mix(in srgb,currentColor 12%,transparent);color:inherit;font:inherit;font-size:13px;font-weight:600;cursor:pointer;text-align:left;opacity:.85}
