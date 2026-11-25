@@ -121,6 +121,48 @@ whenToUse: 实际生图、搜索参考图后图生图、按指令改图或换画
 
 生成耗时与模型、硬件、尺寸、步数和冷启动有关，不承诺固定秒数或质量保证。参考编辑可能继承原图构图与不需要的细节；应检查真实结果。
 
+## 身形与比例提示词
+
+身形不要靠形容词堆（`curvy`、`full`、`slim`），要用**比例关系**锚定。完整方法论见 SOP §2.9，这里是速查。
+
+**四层锚点，缺一层就出问题**：
+
+```
+① short torso with long legs — legs take up more than half her standing height
+② the widest point of her hips peaks immediately below the waist, then narrows
+   toward the knee
+③ waist-to-hip width ratio about 0.63
+④ its fullness continues smoothly into the thighs rather than stopping abruptly,
+   so the lower body reads as one continuous shape
+```
+
+第 ④ 层最容易漏。它是“臀部臃肿但其他地方太骨感”的唯一成因——模型把臀和腿当两个独立部件渲染。
+
+**三个反面词**：`slim overall`/`slim thighs`（腿细成棍）、单独的 `very round full seat`（只给体积不给位置）、无高度约束的 `wide rounded hips`（宽度向下铺）。要“健康有肉”用：
+
+```
+not skinny and not bony + soft rounded shoulders and upper arms with visible
+flesh + full firm thighs with real thickness + calves with a natural curve
+```
+
+**“翘”必须三句一起给**，抽象词 `upper-glute shelf` 单独用无效：
+
+```
+the seat projects clearly backward behind the line of her lower back
+a visible shelf at the top of the glutes
+a distinct crease where the seat meets the back of the thigh
+```
+
+**“胯圆”不是加宽，是消除 hip dips**：`smooth continuous hip curve with no hip dips — the sides rounded and filled`。
+
+**裤型阶梯**：`tight skinny`（最显形）＞ `slim straight`（自然）＞ `wide-leg`（曲线被吞）。要宽松又显形必须显式对冲：`genuinely loose wide-leg, yet the denim still follows the hip line, never stretched tight like leggings`。
+
+**视角**：侧面/斜侧 45–60° 才看得出翘；正后方只看得到宽度，**拍翘不要用正后方**。
+
+**必须 `full body in frame head to toe`**——裁到膝盖以上，所有纵向比例失效。
+
+**实测基准**（653×979 街拍）：腰在 39% 图高、臀最宽 53%、腰/臀 0.63、臀/大腿单侧 2.5。大腿过细必然出现拼接感。
+
 ## 编辑模式的负向提示词
 
 负向提示词按用户目标选择。非空负向且 guidance=1 时本插件会提高到 2.5，可能增加计算量；不要把其他模型的建议说成此工作流的保证，也不要凭空引用基准。
