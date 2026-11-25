@@ -131,9 +131,16 @@ whenToUse: 实际生图、搜索参考图后图生图、按指令改图或换画
 ① short torso with long legs — legs take up more than half her standing height
 ② the widest point of her hips peaks immediately below the waist, then narrows
    toward the knee
-③ waist-to-hip width ratio about 0.63
+③ the waist is full and soft rather than narrow, about 40 percent of the hip width
 ④ its fullness continues smoothly into the thighs rather than stopping abruptly,
    so the lower body reads as one continuous shape
+```
+
+**第 ③ 层最容易写反**：`narrow waist` + 比值 0.63 会把腰压成细瓶颈，与饱满的臀并列就是网红漏斗型——这正是“腰和臀不协调”的来源。参考图实测腰臀比是 **0.42**（不是 0.63），腰约占臀宽 40%。模型对 `narrow` 是强执行的，写窄就真窄；要协调，腰就不能是全身最细的点。补否面约束：
+
+```
+with no pinch or cinch at any point
+so waist to hip is a gentle continuous slope rather than a sharp hourglass break
 ```
 
 第 ④ 层最容易漏。它是“臀部臃肿但其他地方太骨感”的唯一成因——模型把臀和腿当两个独立部件渲染。
@@ -168,6 +175,8 @@ a distinct crease where the seat meets the back of the thigh
 ```
 
 `roomy through the thigh` 会从大腿就放宽，臀被布料盖住；`releases below the hip` 才是真实宽松牛仔的剪裁（腰臀贴合 → 髋下放开）。最后一句 `rather than covering them` 是必需的，它直接禁止遮住臀胯。
+
+**胯位用空间参照，不用方位词**：`immediately below the waist` / `below the hip` 都会漂移（后者实测最差，最宽点掉到大腿中段）。用 `reaching full width at the hip bone about one hand's width below the waistline`，并配“匀速展开”`widens steadily and smoothly with no pinch or cinch at any point`。
 
 **视角**：侧面/斜侧 45–60° 才看得出翘；正后方只看得到宽度，**拍翘不要用正后方**。
 
