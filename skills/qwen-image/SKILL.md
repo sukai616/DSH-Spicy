@@ -155,7 +155,19 @@ a distinct crease where the seat meets the back of the thigh
 
 **“胯圆”不是加宽，是消除 hip dips**：`smooth continuous hip curve with no hip dips — the sides rounded and filled`。
 
-**裤型阶梯**：`tight skinny`（最显形）＞ `slim straight`（自然）＞ `wide-leg`（曲线被吞）。要宽松又显形必须显式对冲：`genuinely loose wide-leg, yet the denim still follows the hip line, never stretched tight like leggings`。
+**裤型阶梯**：`tight skinny`（最显形）＞ `slim straight`（自然）＞ `wide-leg`（曲线被吞）。
+
+要宽松又显形，**必须写清"从哪里开始放宽"**——泛泛的对冲句无效（实测证伪）：
+
+```
+✅ the denim sits close at the waist and follows the seat closely, then releases
+   below the hip into a loose wide leg
+   ... rather than covering them
+
+❌ relaxed and roomy through the thigh, yet the denim still follows the hip line
+```
+
+`roomy through the thigh` 会从大腿就放宽，臀被布料盖住；`releases below the hip` 才是真实宽松牛仔的剪裁（腰臀贴合 → 髋下放开）。最后一句 `rather than covering them` 是必需的，它直接禁止遮住臀胯。
 
 **视角**：侧面/斜侧 45–60° 才看得出翘；正后方只看得到宽度，**拍翘不要用正后方**。
 
