@@ -211,6 +211,33 @@ replace the pose of <image 2> with the pose of <image 1>. keep the character of 
 
 **推荐流程**：①文生图出一张满意的基础人物 → ②换角度用 AnyAngle @0.8–1.0 → ③换姿势用 VNCCS @0.9 → ④整批共用同一 seed 以便归因。
 
+## ControlNet 骨架控制（姿势精确的唯一办法）
+
+**文字提示无论多详细，姿势都不精确。** 要角色精确摆出指定姿势，用 ControlNet。
+
+**三步**：
+
+```python
+# ① 从 3D 人偶图提取线稿（Canny → 加粗 → 反白）
+edges = cv2.Canny(gray, 50, 150)
+edges = cv2.dilate(edges, np.ones((3,3), np.uint8), 1)
+pose_line = 255 - edges        # 白底黑线
+
+# ② 导入资源库（kind=control）拿 controlnet_image_id
+# ③ 生成（不能同用 reference_mode="edit"，互斥）
+qwen_generate_image(controlnet_image_id=<线稿>, controlnet_strength=0.4~0.5, ...)
+```
+
+**strength 分界（实测）**：0.9 照抄彩色人偶 / 0.7 骨架黑线入画 / **0.5 最佳** / 0.45 手臂漂移 / **0.4 姿势仍准且文字有权重**。提示词加 `Real human skin and real fabric, not a mannequin and not a drawing` 和 `No lines, no outlines, no sketch marks anywhere`。
+
+**身材比例**：strength 0.4 时文字生效。蹲坐姿势下**不要写“躯干要短”**——问题在腿被画小。改写成 `extremely long limbs, even folded they fill almost half the frame height, torso less than a third`（躯干/腿从 1.6 降到 1.1）。
+
+**CLI 可绕过插件限制**（inpaint + ControlNet 同时用）：`mflux-generate-qwen-2.1-controlnet`，`--base-model` 必须是 `qwen-image-2.1-turbo-controlnet-union`，加 `--no-bake-lora`，3 分钟/张。
+
+**跨图换脸在本机全部堵死**：`edit`+`mask` 互斥、CLI inpaint 无第二参考图、ControlNet+`edit` 互斥、粗贴脸会被 inpaint 重绘、mask 保脸挡不住 ControlNet。**根本解是训练角色 LoRA**（15–30 张同角色图，2000–4000 步），之后 ControlNet 控姿势 + LoRA 锁身份，两者不打架。
+
+**视角指令在 edit 模式下无效**——参考图朝向主导输出，要换角度用 AnyAngle 或 ControlNet。
+
 ## 编辑模式的负向提示词
 
 负向提示词按用户目标选择。非空负向且 guidance=1 时本插件会提高到 2.5，可能增加计算量；不要把其他模型的建议说成此工作流的保证，也不要凭空引用基准。
