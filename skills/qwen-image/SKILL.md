@@ -218,17 +218,21 @@ replace the pose of <image 2> with the pose of <image 1>. keep the character of 
 **三步**：
 
 ```python
-# ① 从 3D 人偶图提取线稿（Canny → 加粗 → 反白）
+# ① 线稿必须是【黑底白线】，即 Canny/dilate 的原始输出，不要再反相
 edges = cv2.Canny(gray, 50, 150)
 edges = cv2.dilate(edges, np.ones((3,3), np.uint8), 1)
-pose_line = 255 - edges        # 白底黑线
+pose_line = edges             # 黑底白线（正解）
+# 若手上已有白底黑线的白描人偶，用 PIL 反相 + 加粗：
+#   ImageOps.invert(im.convert("L")).filter(ImageFilter.MaxFilter(3))
 
 # ② 导入资源库（kind=control）拿 controlnet_image_id
 # ③ 生成（不能同用 reference_mode="edit"，互斥）
-qwen_generate_image(controlnet_image_id=<线稿>, controlnet_strength=0.4~0.5, ...)
+qwen_generate_image(controlnet_image_id=<线稿>, controlnet_strength=0.45~0.5, ...)
 ```
 
-**strength 分界（实测）**：0.9 照抄彩色人偶 / 0.7 骨架黑线入画 / **0.5 最佳** / 0.45 手臂漂移 / **0.4 姿势仍准且文字有权重**。提示词加 `Real human skin and real fabric, not a mannequin and not a drawing` 和 `No lines, no outlines, no sketch marks anywhere`。
+**极性铁律**：喂**白底黑线**会把黑线画进衣服和腿，整张作废——这不是强度问题，是极性反了。**黑底白线**才干净。早期文档写的"0.7 骨架黑线入画"是极性错误的误判。
+
+**strength 分界（反相线稿实测）**：0.9 照抄彩色人偶 / 0.65 姿势对但脸漂 / 0.55 稳 / **0.5 最佳（首选）** / 0.45 姿势仍准且文字权重更高 / 0.4 文字权重最大。提示词加 `Real human skin and real fabric, not a mannequin and not a drawing` 和 `No lines, no outlines, no sketch marks anywhere`；脸要稳再补具体五官（`soft rounded East Asian features, dark almond eyes, small straight nose, full lips`），**不要**指望第二段 edit 换脸——脸已对时那是空转，输出≈输入。
 
 **身材比例**：strength 0.4 时文字生效。蹲坐姿势下**不要写“躯干要短”**——问题在腿被画小。改写成 `extremely long limbs, even folded they fill almost half the frame height, torso less than a third`（躯干/腿从 1.6 降到 1.1）。
 
@@ -237,6 +241,18 @@ qwen_generate_image(controlnet_image_id=<线稿>, controlnet_strength=0.4~0.5, .
 **跨图换脸在本机全部堵死**：`edit`+`mask` 互斥、CLI inpaint 无第二参考图、ControlNet+`edit` 互斥、粗贴脸会被 inpaint 重绘、mask 保脸挡不住 ControlNet。**根本解是训练角色 LoRA**（15–30 张同角色图，2000–4000 步），之后 ControlNet 控姿势 + LoRA 锁身份，两者不打架。
 
 **视角指令在 edit 模式下无效**——参考图朝向主导输出，要换角度用 AnyAngle 或 ControlNet。
+
+### 姿势任务的决策顺序（选最佳实践用这个）
+
+| 需求 | 走哪条 | 为什么 |
+|---|---|---|
+| 只要某姿势、脸可以重新长 | **ControlNet + 反相线稿 @0.5** | 姿势完美、4–6 分钟、最简单 |
+| 要姿势准 + 脸也要像参考人物 | 双图 edit（角色图 + 3D 人偶）或先 CN 出图再用详细文字锁定身份 | edit 能锁身份但姿势靠猜；CN 准但换脸 |
+| 要姿势 + 脸 + 身材 + 服装全部锁死 | **角色 LoRA + ControlNet** | 适配器只锁脸不锁身，本机无中档 |
+| 只换相机角度 | AnyAngle LoRA @0.8–1.0 | 比 CN 轻 |
+| 已有图只想微调局部 | mask 局部重绘（需 CN Union 7.03G） | 不与 CN 同用 |
+
+**已知不可行**（别浪费时间重试）：`edit` + `mask`、`edit` + `controlnet`、`edit` 多图 + `mask`、CLI inpaint 找第二参考图、粗贴脸后 inpaint 保脸、mask 保头挡 CN。
 
 ## 编辑模式的负向提示词
 
