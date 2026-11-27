@@ -169,6 +169,27 @@ mflux-generate-qwen-2.1 --model ~/.dsh/qwen-studio/models/qwen-image-2.1 --quant
 | 拼图法做多参考 | 脸部出现拼贴异物 |
 | 完整四层身形锚点 | 反而恶化胯位，只用胯位空间参照 |
 
+## 资源库 LoRA 出处与配方（2026-11-27 全网核实）
+
+本地文件无元数据的三个，已按官方模型卡确认来源与必需配方：
+
+| 本地文件 | 官方来源 | 关键信息 |
+|---|---|---|
+| `turbo8_lora_step2500.safetensors` | [chriswritescode/Turbo8](https://huggingface.co/chriswritescode/Turbo8-LoRA-Qwen-Image-2.1) | 8 步**步数蒸馏** LoRA（DMD2 + 轨迹回归），把 base 的 40 步压到 8 步、CFG=1。rank 128。**固定配方：steps 8 / cfg 1 / euler / simple + shift_terminal=None**，任一项改动都没有收益 |
+| `casual-phone-photo.safetensors` | [19nbrown/casual-phone-photo-style-lora](https://huggingface.co/19nbrown/qwen-image-2.1-casual-phone-photo-style-lora) | 风格适配器，126 图 rank 32。**必需触发词 `lbxstyle`**，官方建议强度 **0.8** |
+| `photo-aesthetics-v2.safetensors` | [SimpleTuner/photo-aesthetics-v2](https://huggingface.co/SimpleTuner/Qwen-Image-2.1-LoRA-photo-aesthetics-v2) | 5 万步照片美学 LoRA，512/1024 多尺度 + REPA。rank 32/alpha 32。无触发词，官方按强度 1.0 使用 |
+
+**两条需要修正的用法**：
+
+1. **`casual-phone-photo` 缺触发词**。官方要求 prompt 里含 `lbxstyle` 才激活风格，我们此前只按强度调、没写触发词。官方建议 0.8，本机预设用的是 0.5。
+2. **`turbo8` 的调度器**。官方要求 euler + simple + `shift_terminal=None`；本机若走 `linear` 调度器，与蒸馏配方不一致，画质会劣化。用 turbo8 时优先确认调度器，或改用 base 默认路径。
+
+> **实测结论（2026-11-27）**：
+> - 本机 mflux 的调度器只有 `linear`、`flow_match_euler_discrete`、`seedvr2_euler` 三个，**没有官方要求的 `simple`**。
+> - mflux 源码里**没有 turbo8 的任何配方**（grep 零命中）。它的 `qwen21_scheduler.py` 是给 **Viggle turbo LoRA** 写的固定 sigma 表（6 步、`SIGMA_NODES=(1.0,0.9375,0.875,0.75,0.5,0.25)`），不是 turbo8 的 8 步蒸馏表。
+> - 因此**本机叠加 turbo8 时无法完全复现官方配方**：步数 8 与 cfg 1 能对上，但 `euler/simple + shift_terminal=None + ModelSamplingFlux(max_shift 0.6935)` 这一整套无法原样提供。
+> - 现状**待确认**：本机实际画质是否已受影响。已知本机主方案（三 LoRA + edit）不依赖 turbo8，用它只为 base 打底的场景；若要用 turbo8 追求速度，应先做一次 A/B 对比确认是否劣化。
+
 ## 资源库 LoRA 现状
 
 **核心三件（唯一推荐组合）**：`mva-angles` @0.6、`vnccs-pose` @0.5、`consistency-lora` @0.5
