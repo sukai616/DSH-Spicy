@@ -128,11 +128,15 @@ mflux-generate-qwen-2.1 --model ~/.dsh/qwen-studio/models/qwen-image-2.1 --quant
 
 ## 评测
 
-| 维度 | 方法 | 备注 |
-|---|---|---|
-| 身份 | ArcFace 余弦 | 阈值随数据集自校准 |
-| 姿态 | COCO OKS | 需真值关键点；只有渲染骨架图时无法算 |
-| 质量 | BRISQUE | 越低越好 |
+评测脚本：`qwen-eval-tools/eval_std.py`（五个子命令，标准实现，零自造系数）。
+
+| 维度 | 方法 | 命令 | 备注 |
+|---|---|---|---|
+| 身份 | ArcFace/InsightFace buffalo_l 余弦 | `identity <结果> <参考脸>` | >0.40 同一人 / 0.28–0.40 可疑 / <0.28 不同人 |
+| 姿态 | COCO OKS | `pose <结果> <真值图>` | 自比 1.0 / 同姿势 >0.90 / 不同 <0.70 |
+| 质量 | BRISQUE | `quality <结果>` | 越低越好，常见 20–50 |
+| 有参考质量 | SSIM / LPIPS | `quality_ref <结果> <参考>` | SSIM 越高、LPIPS 越低越像 |
+| 比例 | MediaPipe 33 点 + InsightFace 106 点 | `body <结果>` | 仅 A/B 比较，不能换算厘米 |
 
 **必须目视**：极端姿势、多参考图、主观审美、姿势准确度。量化与目视冲突时**先怀疑算法**——自造指标曾给出与目视相反的结论，已全部废除。
 

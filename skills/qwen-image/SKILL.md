@@ -318,6 +318,26 @@ Qwen 2.1 原生支持多图编辑（远程网关 2.17+）。`qwen_generate_image
 
 通用多图操作示例见 [多图编辑](../../docs/recipes/garment-swap-v1.md)。不同参考图可能互相影响；先明确每张图负责的主体、物品或风格，并检查输出，不承诺固定成功率。参考图宽高比不同时可能中心裁切，注意边缘内容。
 
+## 标准评测栈（本地脚本）
+
+插件自带的 `qwen_image_score` 只做基础统计。需要**有公开标准依据**的量化时用本地评测栈：
+
+```bash
+~/qwen-studio-venv/bin/python ~/Documents/deepseek-harness/default-workspace/qwen-eval-tools/eval_std.py <命令> <图> [参考]
+```
+
+| 命令 | 指标 | 判定 |
+|---|---|---|
+| `identity <结果> <参考脸>` | ArcFace/InsightFace buffalo_l 余弦 | >0.40 同一人 / 0.28–0.40 可疑 / <0.28 不同人 |
+| `pose <结果> <真值图>` | COCO OKS | 自比 1.0 / 同姿势 >0.90 / 不同 <0.70 |
+| `quality <结果>` | BRISQUE | 越低越好，常见 20–50 |
+| `quality_ref <结果> <参考>` | SSIM / LPIPS | SSIM 越高、LPIPS 越低越像 |
+| `body <结果>` | MediaPipe 33 点 + InsightFace 106 点 | 仅 A/B 相对比较，不能换算厘米 |
+
+另有 `make_pose.py`（真人图提 OpenPose 骨架，检出率 <0.1% 说明输入不是真人照）与 `make_face_mask.py`（自动脸部 mask）。
+
+**局限**：`body` 是通用人体测量学，不区分人种，只能同批图横向比较；面部高度是 106 点「额头→下巴」，不含发际线以上，绝对值不可引用。极端姿势、多参考图、审美判断一律以目视为主。
+
 ## 客观评分：qwen_image_score
 
 `qwen_image_score({ids, write?})` 对已完成任务算本地指标：edge/detail、grain、饱和度、亮度、肤色占比、高光/阴影剪切，并给暂定 flags（heavy-grain / texture-overload）。它是**诊断报告，不是 pass/fail 门禁**；阈值要等人工 ground truth 校准。`write=true` 只在图片旁写 `qa.json`，不改图片、收藏或任务记录。评分不加载模型、不建 SSH。
