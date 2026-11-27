@@ -18,10 +18,11 @@ export function ResourcePicker({
 }) {
   const [query, setQuery] = useState(""),
     [open, setOpen] = useState(false);
+  // 按 kind 精确匹配：原来非 lora 走 r.kind !== "lora"，会让参考图选择器
+  // 同时列出控制图和蒙版，选中后类型对不上。
   const items = resources.filter(
     (r) =>
-      (kind === "lora" ? r.kind === "lora" : r.kind !== "lora") &&
-      r.name.toLowerCase().includes(query.toLowerCase()),
+      r.kind === kind && r.name.toLowerCase().includes(query.toLowerCase()),
   );
   const origin = {
     imported: "已导入",
