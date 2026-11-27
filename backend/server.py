@@ -96,12 +96,21 @@ def validate(data):
     mode = data.get('reference_mode', 'variation')
     if mode not in ('variation', 'edit'): raise ValueError('参考图模式无效')
     source = data.get('source_image_id')
+    source_ids = data.get('source_image_ids')
+    # 多图编辑：source_image_ids 优先，2–8 张，每张都要是合法图库 ID
+    if isinstance(source_ids, list) and source_ids:
+        if not 2 <= len(source_ids) <= 8: raise ValueError('多图编辑需要2–8张参考图')
+        if any(not isinstance(s, str) or not re.fullmatch('[a-f0-9]{32}', s) for s in source_ids):
+            raise ValueError('参考图片ID无效')
+        if len(set(source_ids)) != len(source_ids): raise ValueError('参考图片不能重复')
+        source = source_ids[0]
+        params.update(source_image_ids=source_ids, source_image_id=source)
     if source is not None:
         if not isinstance(source, str) or not re.fullmatch('[a-f0-9]{32}', source): raise ValueError('参考图片ID无效')
         strength = data.get('change_strength', .45)
         if type(strength) not in (int, float) or not .05 <= strength <= .95: raise ValueError('变化幅度应为0.05–0.95')
         if steps < 2: raise ValueError('图生图至少需要2步')
-        params.update(source_image_id=source)
+        params.setdefault('source_image_id', source)
         if mode == 'edit':
             if 'change_strength' in data or data.get('mask_image_id') or data.get('controlnet_image_id'):
                 raise ValueError('原生参考编辑不能叠加变化幅度、蒙版或结构控制')
@@ -191,24 +200,35 @@ class JobQueue:
                     path = Path(filename).resolve()
                     if not any(path.is_relative_to(root) for root in lora_roots) or not path.is_file(): raise ValueError('请选择插件管理的 LoRA 或设置文件夹内的权重')
             inputs = {}
-            for key, name in (('source_image_id', 'reference'), ('controlnet_image_id', 'control'), ('mask_image_id', 'mask')):
-                if not params.get(key): continue
-                source_folder = self.root/'images'/params[key]
-                source_path = source_folder/'image.png'
-                if source_path.resolve() != source_path: raise ValueError('参考图片路径无效')
-                if not source_path.is_file():
-                    source_folder = self.root/'assets/images'/params[key]
-                    source_path = source_folder/'image.png'
-                    if source_path.resolve() != source_path: raise ValueError('参考图片路径无效')
-                    asset = json.loads((source_folder/'asset.json').read_text())
-                    if asset.get('id') != params[key] or asset.get('kind') not in ('source','control','mask'): raise ValueError('输入图片记录无效')
+
+            def read_source(img_id):
+                """读取一张图库/生成图的 PNG 字节，校验路径、完成状态与大小。"""
+                folder = self.root/'images'/img_id
+                path = folder/'image.png'
+                if path.resolve() != path: raise ValueError('参考图片路径无效')
+                if not path.is_file():
+                    folder = self.root/'assets/images'/img_id
+                    path = folder/'image.png'
+                    if path.resolve() != path: raise ValueError('参考图片路径无效')
+                    asset = json.loads((folder/'asset.json').read_text())
+                    if asset.get('id') != img_id or asset.get('kind') not in ('source','control','mask'): raise ValueError('输入图片记录无效')
                 else:
-                    source_job = json.loads((source_folder/'job.json').read_text())
+                    source_job = json.loads((folder/'job.json').read_text())
                     if source_job.get('status') != 'complete': raise ValueError('参考图片尚未生成完成')
-                if source_path.stat().st_size > 64*1024*1024: raise ValueError('参考图片过大')
-                pixels = source_path.read_bytes()
+                if path.stat().st_size > 64*1024*1024: raise ValueError('参考图片过大')
+                pixels = path.read_bytes()
                 if not pixels.startswith(b'\x89PNG\r\n\x1a\n'): raise ValueError('参考图片不是PNG')
-                inputs[name] = pixels
+                return pixels
+
+            # 多图编辑：source_image_ids[0] 作 reference，其余存 reference_1..N
+            multi = params.get('source_image_ids') or []
+            for index, img_id in enumerate(multi):
+                name = 'reference' if index == 0 else f'reference_{index}'
+                inputs[name] = read_source(img_id)
+            for key, name in (('source_image_id', 'reference'), ('controlnet_image_id', 'control'), ('mask_image_id', 'mask')):
+                if name in inputs: continue
+                if not params.get(key): continue
+                inputs[name] = read_source(params[key])
             # Snapshot all image inputs before the durable admission receipt.
             for name, pixels in inputs.items():
                 folder = self.root/'images'/job_id
@@ -308,18 +328,24 @@ def load_engine(job):
     from mflux.models.common.resolution.config_resolution import ConfigResolution
     model = Path(os.environ.get('QWEN_MODEL_PATH', str(ROOT/'models/qwen-image-2.1')))
     kwargs = dict(model_path=str(model))
+    # QWEN_QUANTIZE=0 关闭量化走 bf16；默认 8bit，24GB 统一内存设备必须量化
+    _quantize = os.environ.get('QWEN_QUANTIZE', '8')
+    if _quantize and _quantize != '0':
+        kwargs['quantize'] = int(_quantize)
     if job.get('lora_paths'):
         kwargs.update(lora_paths=job['lora_paths'], lora_scales=job['lora_scales'])
+    # QWEN_MODEL_FAMILY=qwen-image-2.1 切回基础权重；默认 Turbo 蒸馏权重（8 步、省显存）
+    family = os.environ.get('QWEN_MODEL_FAMILY', 'qwen-image-2.1-turbo')
+    config = ConfigResolution.resolve_restricted(family, family, model_path=str(model), base_model=family)
     if job.get('reference_mode') == 'edit':
         from mflux.models.qwen21.variants.edit.qwen_image_21_edit import QwenImage21Edit
-        return QwenImage21Edit(**kwargs)
+        return QwenImage21Edit(model_config=config, **kwargs)
     if job.get('controlnet_image_id') or job.get('mask_image_id'):
         from mflux.models.qwen21.variants.controlnet.qwen_image_21_controlnet import QwenImage21Controlnet
-        config = ConfigResolution.resolve_restricted(None, 'qwen-image-2.1-controlnet-union', model_path=str(model))
+        control = ConfigResolution.resolve_restricted(None, 'qwen-image-2.1-controlnet-union', model_path=str(model))
         # A complete local Union checkpoint is required. No download is initiated.
-        return QwenImage21Controlnet(model_config=config, **kwargs)
+        return QwenImage21Controlnet(model_config=control, **kwargs)
     from mflux.models.qwen21.variants.txt2img.qwen_image_21 import QwenImage21
-    config = ConfigResolution.resolve_restricted('qwen-image-2.1','qwen-image-2.1',model_path=str(model),base_model='qwen-image-2.1')
     return QwenImage21(model_config=config, **kwargs)
 
 def generation_args(job, folder):
@@ -329,8 +355,13 @@ def generation_args(job, folder):
     if job.get('reference_mode') == 'edit':
         # Exact prefix reuse only. No step skipping, prompt rewriting or hidden retries.
         if args['guidance'] > 1 and args['negative_prompt'] is None: args['negative_prompt'] = ''
-        args.update(image_paths=[str(folder/'reference.png')], scheduler='linear', strength=1.0,
-                    output_resolution=1024, use_kv_cache=True, use_step_cache=False)
+        # 多图编辑：按 reference.png / reference_1.png ... 顺序全部送进 image_paths
+        refs = [folder/'reference.png']
+        index = 1
+        while (folder/f'reference_{index}.png').is_file():
+            refs.append(folder/f'reference_{index}.png'); index += 1
+        args.update(image_paths=[str(p) for p in refs], scheduler='linear', strength=float(os.environ.get('QWEN_EDIT_STRENGTH', '1.0')),
+                    output_resolution=int(os.environ.get('QWEN_EDIT_RESOLUTION', '1536')), use_kv_cache=True, use_step_cache=False)
     elif controlled:
         # This MFLUX variant has no scheduler or image_strength argument.
         if args['guidance'] > 1 and args['negative_prompt'] is None: args['negative_prompt'] = ''
