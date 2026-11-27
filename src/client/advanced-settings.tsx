@@ -21,19 +21,28 @@ export const LORA_STYLES: LoraStyle[] = [
     id: "real",
     label: "纪实真实",
     hint: "毛孔雀斑最自然。再次点击可取消该组合。",
-    entries: [{ re: /anything2real/i, scale: 0.3 }],
+    entries: [
+      { re: /turbo8/i, scale: 0.5 },
+      { re: /anything2real/i, scale: 0.3 },
+    ],
   },
   {
     id: "commercial",
     label: "商业锐利",
     hint: "边缘锐利通透，适合产品、建筑、杂志硬照。再次点击可取消该组合。",
-    entries: [{ re: /photo-aesthetics/i, scale: 0.5 }],
+    entries: [
+      { re: /turbo8/i, scale: 0.3 },
+      { re: /photo-aesthetics/i, scale: 0.5 },
+    ],
   },
   {
     id: "clean",
     label: "干净美颜",
-    hint: "皮肤干净无瑕，适合美妆护肤、网红精修。该 LoRA 需要提示词含 lbxstyle 才激活。再次点击可取消该组合。",
-    entries: [{ re: /casual-phone/i, scale: 0.8 }],
+    hint: "皮肤干净无瑕，适合美妆护肤、网红精修。再次点击可取消该组合。",
+    entries: [
+      { re: /turbo8/i, scale: 0.5 },
+      { re: /casual-phone/i, scale: 0.5 },
+    ],
   },
   {
     id: "none",

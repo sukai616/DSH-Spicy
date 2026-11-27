@@ -30,9 +30,9 @@
 | 1:1 复刻现成照片姿态 | `controlnet` | 无 | OpenPose 彩色骨架 @0.5，身份必丢 |
 | 只要脸像，姿势随意 | `edit` | 无 | 身份 0.531 最高，脸裁到只剩脸 |
 | 纯文生图 / 场景 / 物件 / 海报 | txt2img | 无 | 五层骨架 |
-| 皮肤质感 / 雀斑毛孔（不锁身份） | txt2img | anything2real@0.3 | =「纪实真实」 |
-| 产品 / 建筑 / 杂志硬照 | txt2img | photo-aesthetics@0.5 | =「商业锐利」 |
-| 平滑干净的网红脸 | txt2img | casual-phone@0.8 | **必须加 `lbxstyle`** |
+| 皮肤质感 / 雀斑毛孔（不锁身份） | txt2img | turbo8@0.5 + anything2real@0.3 | =「纪实真实」 |
+| 产品 / 建筑 / 杂志硬照 | txt2img | turbo8@0.3 + photo-aesthetics@0.5 | =「商业锐利」 |
+| 平滑干净的网红脸 | txt2img | turbo8@0.5 + casual-phone@0.5 | **必须加 `lbxstyle`** |
 | 风格化（黏土 / 动漫 / 插画） | txt2img | 单个风格 LoRA | 不叠加其他 |
 | 换装 | `edit` | 无 | 文字写服装，不喂图 |
 | 换机位 | `edit` | anyangle@0.9 | 文字配合 |
@@ -231,6 +231,7 @@ mflux-generate-qwen-2.1 --model ~/.dsh/qwen-studio/models/qwen-image-2.1 --quant
 
 | 文件 | 出处 | 作用 | 触发词 | 强度 |
 |---|---|---|---|---|
+| `turbo8_lora_step2500.safetensors` | [chriswritescode/Turbo8](https://huggingface.co/chriswritescode/Turbo8-LoRA-Qwen-Image-2.1) | **8 步蒸馏**（DMD2 + 轨迹回归），rank 128。同时是**皮肤质感来源**：0.5 时出雀斑与毛孔，1.0 会严重发霉 | 无 | 0.3–0.5（**不要用 1.0**） |
 | `anything2real.safetensors` | 内嵌名 anime2real | **去二次元感、增真实感**，毛孔雀斑最自然 | 无 | 0.3 |
 | `photo-aesthetics-v2.safetensors` | [SimpleTuner/photo-aesthetics-v2](https://huggingface.co/SimpleTuner/Qwen-Image-2.1-LoRA-photo-aesthetics-v2) | **边缘锐利通透**，产品/建筑/杂志硬照。5 万步、rank 32 | 无 | 0.5（官方 1.0） |
 | `casual-phone-photo.safetensors` | [19nbrown/casual-phone-photo-style-lora](https://huggingface.co/19nbrown/qwen-image-2.1-casual-phone-photo-style-lora) | **最平滑干净的网红脸**（grain 2.34，全场最平滑）。126 图、rank 32 | **`lbxstyle`（必需）** | 官方 0.8；本机预设用 0.5 |
@@ -241,9 +242,9 @@ mflux-generate-qwen-2.1 --model ~/.dsh/qwen-studio/models/qwen-image-2.1 --quant
 
 | 按钮 | 组合 |
 |---|---|
-| 纪实真实 | anything2real@0.3 |
-| 商业锐利 | photo-aesthetics@0.5 |
-| 干净美颜 | casual-phone@0.8（**预设不含 `lbxstyle`**，用它要自己补触发词） |
+| 纪实真实 | turbo8@0.5 + anything2real@0.3 |
+| 商业锐利 | turbo8@0.3 + photo-aesthetics@0.5 |
+| 干净美颜 | turbo8@0.5 + casual-phone@0.5（**预设不含 `lbxstyle`**，用它要自己补触发词） |
 
 
 
