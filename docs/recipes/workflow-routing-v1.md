@@ -30,9 +30,9 @@
 | 1:1 复刻现成照片姿态 | `controlnet` | 无 | OpenPose 彩色骨架 @0.5，身份必丢 |
 | 只要脸像，姿势随意 | `edit` | 无 | 身份 0.531 最高，脸裁到只剩脸 |
 | 纯文生图 / 场景 / 物件 / 海报 | txt2img | 无 | 五层骨架 |
-| 皮肤质感 / 雀斑毛孔（不锁身份） | txt2img | turbo8@0.5 + anything2real@0.3 | =「纪实真实」 |
-| 产品 / 建筑 / 杂志硬照 | txt2img | turbo8@0.3 + photo-aesthetics@0.5 | =「商业锐利」 |
-| 平滑干净的网红脸 | txt2img | turbo8@0.5 + casual-phone@0.5 | **必须加 `lbxstyle`** |
+| 皮肤质感 / 雀斑毛孔（不锁身份） | txt2img | anything2real@0.3 | 原「纪实真实」去 turbo8 |
+| 产品 / 建筑 / 杂志硬照 | txt2img | photo-aesthetics@0.5 | 原「商业锐利」去 turbo8 |
+| 平滑干净的网红脸 | txt2img | casual-phone@0.8 | **必须加 `lbxstyle`** |
 | 风格化（黏土 / 动漫 / 插画） | txt2img | 单个风格 LoRA | 不叠加其他 |
 | 换装 | `edit` | 无 | 文字写服装，不喂图 |
 | 换机位 | `edit` | anyangle@0.9 | 文字配合 |
@@ -231,7 +231,7 @@ mflux-generate-qwen-2.1 --model ~/.dsh/qwen-studio/models/qwen-image-2.1 --quant
 
 | 文件 | 出处 | 作用 | 触发词 | 强度 |
 |---|---|---|---|---|
-| `turbo8_lora_step2500.safetensors` | [chriswritescode/Turbo8](https://huggingface.co/chriswritescode/Turbo8-LoRA-Qwen-Image-2.1) | **8 步蒸馏**（DMD2 + 轨迹回归），base 40 步压到 8 步、CFG=1，rank 128 | 无 | 1.0 |
+| `turbo8_lora_step2500.safetensors` | [chriswritescode/Turbo8](https://huggingface.co/chriswritescode/Turbo8-LoRA-Qwen-Image-2.1) | **8 步蒸馏**，rank 128。⚠️ **本机禁用**：实测劣化画质且更慢，见第五节 | — | **不要用** |
 | `anything2real.safetensors` | 内嵌名 anime2real | **去二次元感、增真实感**，毛孔雀斑最自然 | 无 | 0.3 |
 | `photo-aesthetics-v2.safetensors` | [SimpleTuner/photo-aesthetics-v2](https://huggingface.co/SimpleTuner/Qwen-Image-2.1-LoRA-photo-aesthetics-v2) | **边缘锐利通透**，产品/建筑/杂志硬照。5 万步、rank 32 | 无 | 0.5（官方 1.0） |
 | `casual-phone-photo.safetensors` | [19nbrown/casual-phone-photo-style-lora](https://huggingface.co/19nbrown/qwen-image-2.1-casual-phone-photo-style-lora) | **最平滑干净的网红脸**（grain 2.34，全场最平滑）。126 图、rank 32 | **`lbxstyle`（必需）** | 官方 0.8；本机预设用 0.5 |
@@ -269,14 +269,23 @@ mflux-generate-qwen-2.1 --model ~/.dsh/qwen-studio/models/qwen-image-2.1 --quant
 
 **全部降分**。要别的效果就**另起一个任务**，不要在同一张图上既要身份又要风格。
 
-### 五、turbo8 的本机限制（重要）
+### 五、turbo8 在本机会劣化画质（2026-11-27 实测，已定论）
 
-官方固定配方是 `steps 8 / cfg 1 / euler / simple + shift_terminal=None + ModelSamplingFlux(max_shift 0.6935)`，模型卡明确写「任一项改动都没有收益」。
+**不是待确认，是实测结论：本机不要用 turbo8。**
 
-本机实际情况（2026-11-27 查证）：
+**A/B 实测**（同 prompt、同 seed 777、512×768、8 步、quantize 8、base 模型）：
 
-- mflux 调度器只有 `linear`、`flow_match_euler_discrete`、`seedvr2_euler`，**没有 `simple`**
-- mflux 源码 **turbo8 零命中**，无内置配方
-- `qwen21_scheduler.py` 是给 **Viggle turbo**（6 步）写的，不是 turbo8 的 8 步表
+| 组 | 配置 | BRISQUE ↓ | 目视 | 耗时 |
+|---|---|---|---|---|
+| A | **带 turbo8@1.0** + linear | **24.70** | ❌ 满脸色斑污渍、T 恤脏纹，典型「发霉感」 | 4m29s |
+| B | 无 LoRA + linear | **13.58** | ✅ 毛孔雀斑自然、光影干净 | 3m42s |
+| C | 无 LoRA + euler（对照） | **14.60** | ✅ 干净 | 3m59s |
 
-**结论**：步数与 CFG 能对上，调度器那套对不上。**待确认**是否已造成画质劣化——主方案不依赖 turbo8，只在纯文生图打底时用；若要用它追求速度，先做一次 A/B 对比。
+**关键对照**：C 组证明换用 euler 调度器本身不会劣化（14.60，与 B 的 13.58 同档）。所以劣化**来自 turbo8 与本机的组合本身**，不是调度器选错。
+
+**根因**：官方要求 `euler/simple + shift_terminal=None + ModelSamplingFlux(max_shift 0.6935)` 一整套固定配方，本机 mflux 只有 `linear / flow_match_euler_discrete / seedvr2_euler`，**没有 `simple`**，且源码里**无 turbo8 内置配方**（唯一相关的 `qwen21_scheduler.py` 是给 Viggle turbo 的 6 步表）。缺了配方，蒸馏 LoRA 的噪声调度对不上，画质崩坏。
+
+**速度也没赢**：A 组 4m29s 反而比 B 组 3m42s 慢（首次要 bake LoRA）。**既慢又差，没有使用理由。**
+
+**结论**：纯文生图**直接用 base + 8 步**，不挂 turbo8。三个内置风格预设里 turbo8 的部分应当去掉，改用 base 直出——本机 base 在 8 步下画质已经很好。
+
