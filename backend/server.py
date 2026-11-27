@@ -182,7 +182,7 @@ class JobQueue:
                 request = job.get('request', {k: job.get(k) for k in params})
                 if request != params: raise ValueError('任务ID已被其他参数使用')
                 return dict(job)
-            if self.closing or self.pending >= 10: raise RuntimeError('队列已满或服务正在退出，请稍后重试')
+            if self.closing or self.pending >= 4: raise RuntimeError('队列已满或服务正在退出，请稍后重试')
             if params.get('lora_paths'):
                 try: setting = json.loads((self.root/'state/runtime-config.json').read_text())
                 except (OSError, ValueError): setting = {}

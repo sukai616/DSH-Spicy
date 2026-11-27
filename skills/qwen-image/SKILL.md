@@ -359,7 +359,7 @@ Qwen 2.1 原生支持多图编辑（远程网关 2.17+）。`qwen_generate_image
 ## 批量提交、批量导入与导出
 
 - 一次要出多张、或多个 seed 对比：`qwen_image_batch({jobs:[...], max_parallel?})`，1–10 个独立任务，返回真实 id，**不等待出图**。每个任务接受与 `qwen_generate_image` 相同的参数。失败按 index 报告，不自动重试已接受任务。
-  **调度机制**：本机后端用 `ThreadPoolExecutor(max_workers=1)` 执行，**天然串行**；队列深度 10。`max_parallel` 默认 10，只决定一次交给后端多少个，不改变执行顺序。因此**对照实验应该一次提交全部任务**，不要去等上一张出图再提交下一张（那样既不更快，还容易撞上工具调用超时）。
+  **调度机制**：本机后端用 `ThreadPoolExecutor(max_workers=1)` 执行，**天然串行**；后端队列深度 4。`max_parallel`（1–4，默认 4）决定一次能塞进队列多少个，不改变执行顺序。超过 4 个的批次会按队列空位分批提交，因此**大批量（>4）请分次调用**，不要一次塞 10 个——单批超过队列深度时会等待前面的任务完成，容易撞上工具调用超时。
 - 一次导入多张本机参考图：`qwen_image_import_many({paths, kind})`，1–20 个绝对路径或 `~/`。同内容同 kind 返回已有 id（`deduped: true`），不会重复占空间；单张失败不影响其余。
 - 要把已完成任务交给外部图库/工具：`qwen_image_export({ids, out_dir})`，复制为 `<id>/image.png`、`<id>/job.json` 和 `manifest.json`，原图库不动、目标存在时拒绝覆盖。
 

@@ -17,8 +17,6 @@ const output = {
   render: (_args: unknown, value: { result: string }) => [{ type: "text" as const, text: value.result }],
 } as const;
 
-/** 提交前只确认后端还能收：后端 ThreadPoolExecutor(max_workers=1) 自己串行，
- *  前端排队没有意义，只要保证 pending 不超过后端上限即可。 */
 async function slot(dir: string, maxParallel: number, deadline: number) {
   for (;;) {
     const running = (await readJobs(dir)).filter(active).length;
@@ -38,7 +36,7 @@ async function visible(dir: string, id: string, deadline: number) {
 export function registerBatchTool(ctx: Context, worker: Worker) {
   ctx.tools.register(defineTool({
     name: "qwen_image_batch",
-    description: "Submit 1–10 independent Qwen image jobs in one call, then return their real task ids without waiting for pixels. Each job accepts the same parameters as qwen_generate_image. The backend runs one image at a time, so submitted jobs execute in order; a failed job is reported per index and never stops the rest. This tool only submits: poll qwen_image_jobs / qwen_image_status for progress, and use qwen_image_gallery for lineage. Never invent ids, never retry accepted jobs automatically.",
+    description: "Submit 1–10 independent Qwen image jobs in one call, then return their real task ids without waiting for pixels. Each job accepts the same parameters as qwen_generate_image. Submission auto-waves to the backend's 4-job admission limit; a failed job is reported per index and never stops the rest. This tool only submits: poll qwen_image_jobs / qwen_image_status for progress, and use qwen_image_gallery for lineage. Never invent ids, never retry accepted jobs automatically.",
     timeoutMs: 900000,
     parameters: {
       jobs: {
@@ -53,15 +51,14 @@ export function registerBatchTool(ctx: Context, worker: Worker) {
       },
       max_parallel: {
         type: "integer",
-        description: "How many jobs may be queued before the next submission, 1–10, default 10 (the backend queue depth). The backend runs one job at a time, so this only decides how many are handed over up front.",
+        description: "How many jobs may be active before the next submission, 1–4, default 4 (backend admission cap).",
       },
     },
     output,
-    async execute({ jobs, max_parallel: maxParallel = 10 }, exec) {
+    async execute({ jobs, max_parallel: maxParallel = 4 }, exec) {
       if (!Array.isArray(jobs) || !jobs.length || jobs.length > 10) throw Error("jobs 需要 1–10 个独立任务");
-      if (!Number.isInteger(maxParallel) || maxParallel < 1 || maxParallel > 10) throw Error("max_parallel 需为 1–10");
-      // 串行提交时每个任务要等前一个跑完，15 分钟装不下 10 个任务（单张 512×768 约 4 分钟）。
-      const dir = worker.directory(), deadline = Date.now() + 90 * 60 * 1000;
+      if (!Number.isInteger(maxParallel) || maxParallel < 1 || maxParallel > 4) throw Error("max_parallel 需为 1–4");
+      const dir = worker.directory(), deadline = Date.now() + 15 * 60 * 1000;
       const accepted: Array<{ index: number; id: string; seed?: number }> = [];
       const failed: Array<{ index: number; error: string }> = [];
       for (const [index, raw] of jobs.entries()) {
