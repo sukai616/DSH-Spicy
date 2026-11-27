@@ -359,8 +359,8 @@ Qwen 2.1 原生支持多图编辑（远程网关 2.17+）。`qwen_generate_image
 ## 批量提交、批量导入与导出
 
 - 一次要出多张、或多个 seed 对比：`qwen_image_batch({jobs:[...], max_parallel?})`，1–10 个独立任务，返回真实 id，**不等待出图**。每个任务接受与 `qwen_generate_image` 相同的参数。失败按 index 报告，不自动重试已接受任务。
-  **串行排队跑很多条**：传 `max_parallel: 1`。工具里的 `slot()` 会等前一个任务跑完才提交下一个，真正的排队在工具侧完成，不需要分次调用。等待窗口按任务数放大（`jobs.length × 8 分钟`），所以一次提交 10 条也能全部排完。
-  **机制说明**：本机后端 `ThreadPoolExecutor(max_workers=1)` 本身就串行；后端队列深度 4。`max_parallel` 是**提交节奏**——1 表示逐条等完再交，4 表示一次性塞满队列。要「排队串行、一条接一条」就用 1；要「尽快全部塞进去、由后端按序执行」就用 4（但超过 4 条时会阻塞等待，此时靠放大后的窗口兜住）。
+  **串行排队跑很多条**：传 `max_parallel: 1`。`slot()` 等的是「队列里未跑完的任务数 < maxParallel」，**单个任务跑多久与它无关**——一小时的长任务只要进了队列就不受约束。一次提交 10 条也能全部排完，不需要分次调用。
+  **机制**：本机后端 `ThreadPoolExecutor(max_workers=1)` 本身串行，队列深度 4（`pending` 在提交时 +1、跑完时 −1）。`max_parallel` 控制**同时占多少队列位**：1=逐条等完再交，4=一次塞满队列。超过后端深度 4 时，`slot()` 会阻塞等空位，这是唯一会「等很久」的情形。
 - 一次导入多张本机参考图：`qwen_image_import_many({paths, kind})`，1–20 个绝对路径或 `~/`。同内容同 kind 返回已有 id（`deduped: true`），不会重复占空间；单张失败不影响其余。
 - 要把已完成任务交给外部图库/工具：`qwen_image_export({ids, out_dir})`，复制为 `<id>/image.png`、`<id>/job.json` 和 `manifest.json`，原图库不动、目标存在时拒绝覆盖。
 
