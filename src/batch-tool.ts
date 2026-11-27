@@ -58,7 +58,9 @@ export function registerBatchTool(ctx: Context, worker: Worker) {
     async execute({ jobs, max_parallel: maxParallel = 4 }, exec) {
       if (!Array.isArray(jobs) || !jobs.length || jobs.length > 10) throw Error("jobs 需要 1–10 个独立任务");
       if (!Number.isInteger(maxParallel) || maxParallel < 1 || maxParallel > 4) throw Error("max_parallel 需为 1–4");
-      const dir = worker.directory(), deadline = Date.now() + 15 * 60 * 1000;
+      // slot() 就是串行排队：max_parallel=1 时等前一个跑完才提交下一个。
+      // 单张 512×768 约 4 分钟，10 张要 40 分钟，所以窗口按任务数放大而不是固定 15 分钟。
+      const dir = worker.directory(), deadline = Date.now() + jobs.length * 8 * 60 * 1000;
       const accepted: Array<{ index: number; id: string; seed?: number }> = [];
       const failed: Array<{ index: number; error: string }> = [];
       for (const [index, raw] of jobs.entries()) {
