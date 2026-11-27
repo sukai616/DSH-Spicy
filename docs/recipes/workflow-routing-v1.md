@@ -18,22 +18,39 @@
 
 `--small-text-encoder` **不支持** `auto_mask` / `enhance_prompt` / `verify`（源码强制互斥），但参考图与 LoRA 完全可用。
 
+**生成必须串行，一次只跑一个。** 本机 24GB 统一内存装不下两个 edit（单张峰值约 13GB），并发会互相抢内存卡在早期步数——实测 4 个进程同时跑，两个卡在 2/8 步十几分钟不出图，看着像任务失败。要对比多个方案就排好队逐个跑，不要为省时间并发。
+
 ## 路线一：姿势 + 身份 + 全身（最常用）
 
-**适用**：给了人脸参考，要指定姿势（含深蹲、举臂、盘腿、背影等极端姿势），要全身入画。
+**适用**：给了人脸参考，要指定姿势（含深蹲、举臂、盘腿、坐地、背影等极端姿势），要全身入画。有姿势图（骨架或真人姿态图）时用本节；只有文字描述姿势时，见本节末尾的降级写法。
 
-**为什么不用 ControlNet**：`vnccs-pose` 在 `edit` 里对极端姿势控制力足够。CN 变体没有 `--image-paths`，脸只能靠文字重画，身份实测 -0.029。
+**为什么不用 ControlNet**：`vnccs-pose` 在 `edit` 里对姿势控制力足够，而且 CN 通道从源码上就没有身份输入口。CN 变体没有 `--image-paths`，`_encode_prompt` 走的是 `QwenImage21PromptEncoder.encode(prompt, [], ...)`——**视觉槽位传的是空列表**，脸图喂进去也不参与编码。这不是参数问题，调 strength 或加 LoRA 都改不了，身份实测 -0.012 ~ -0.029。
+
+### 图序铁律：姿势图放第一张（2026-11-27 实测）
+
+`images[0]` 是 edit 的起点图（源码 `reference_image = ImageUtil.load_image(image_paths[0])`），它决定构图与姿势的基底；`images[-1]` 决定输出宽高比。**姿势图必须放第一张，脸图放它后面。**
+
+同一 seed、同一 prompt、只调图序的对照：
+
+| 图序 | 姿势 | 身份（ArcFace） |
+|---|---|---|
+| 脸图第一 | 姿势被起点图拉回，退化成默认站姿 | 0.665–0.734 |
+| **姿势图第一** | **坐地、双手撑地，贴合骨架** | **0.787–0.799** |
+
+图序放反**不报错**，是静默失败：看起来"骨架没生效"，实际是图被当成了要保留的原图。
 
 ```bash
 mflux-generate-qwen-2.1-edit \
   --model ~/.dsh/qwen-studio/models/qwen-image-2.1 --quantize 8 --small-text-encoder \
-  --image-paths <裁到只剩脸的正脸图> \
-  --prompt "<mva> full body view, facing the camera. This exact young woman from <image1>. <姿势>. <服装>. plain warm grey studio wall, full body in frame head to toe." \
+  --image-paths <姿势图> <裁到只剩脸的正脸图> [可选: <身材/穿搭图>] \
+  --prompt "Replace the pose of the woman in <image2> with the pose shown in <image1>. Keep her exact identity, face, hairstyle and skin tone from <image2>. <image1> only defines body position and limb placement - ignore its colored lines and joint dots entirely, do not copy its style. <姿势文字>. <服装>. Full body in frame head to toe. Plain warm grey studio wall, soft even lighting. One single photorealistic photograph." \
   --lora-paths mva-angles.safetensors vnccs-pose.safetensors consistency-lora.safetensors \
   --lora-scales 0.6 0.5 0.5 \
   --steps 8 --seed <N> --width 512 --height 768 --output-resolution 512 \
   --output out.png
 ```
+
+**prompt 三件事**：① 明确写"换 <image2> 的姿势为 <image1> 的姿势"；② 明确写"忽略骨架的线条与关节点，不要复制它的画风"；③ 仍要写一句姿势文字兜底（见下）。
 
 **参数起点**（已收敛，不必再搜 LoRA）：
 
@@ -44,7 +61,9 @@ mflux-generate-qwen-2.1-edit \
 | consistency-lora | 0.5 | 极端姿势身份崩的解法，最差从 0.038 提到 0.464 |
 | `--strength` | 保持默认 1.0 | 0.5 会锁死源图构图、姿势失效；要用不低于 0.7 |
 
-**姿势写法**：关节角度、支撑面、手的位置、相机朝向。常见姿势（蹲/坐/举臂/背影）笼统描述已足够；只在姿势罕见或模型理解错时才补全四要素。
+**姿势文字仍需保留**：骨架定结构，文字兜底语义。实测去掉姿势文字后，编辑会把"坐姿骨架"理解成"抬腿"或退回站姿；两者同时给才稳。常见姿势（蹲/坐/举臂/背影）一句话够用，只在姿势罕见或模型理解错时才补关节角度、支撑面、手位置、相机朝向四要素。
+
+**降级写法（没有姿势图时）**：去掉 `<姿势图>`，只喂脸图，把姿势完整写进 prompt。此时姿势精度靠文字，身份仍可用（0.665+），但极端姿势容易走形。
 
 **稳定性**：温和姿势跨 seed 稳定（0.61–0.72）；极端姿势**必须带 consistency LoRA**，否则某个 seed 会崩到 0.038。
 
@@ -115,7 +134,7 @@ mflux-generate-qwen-2.1 --model ~/.dsh/qwen-studio/models/qwen-image-2.1 --quant
 
 **四条硬条件**：
 1. 每张图职责单一，prompt 用 `<image1> <image2> <image3>` 明确指代。
-2. **脸图放第一张**（`images[0]` 是 edit source 决定 blend 起点，`images[-1]` 决定宽高比）。图序反转会带出斜挎包。
+2. **脸图放第一张**（`images[0]` 是 edit source 决定 blend 起点，`images[-1]` 决定宽高比）。图序反转会带出斜挎包。**例外**：这一条只适用于"没有姿势图、靠文字定姿势"的场景；一旦要按姿势图复现姿势，姿势图必须占第一张，脸图顺延（见路线一「图序铁律」）。
 3. 脸图裁到只剩脸。
 4. **必须全图脱敏**。串味来源常不是最显眼那张——实测背带来自身材图而非服装图。
 
@@ -146,7 +165,8 @@ mflux-generate-qwen-2.1 --model ~/.dsh/qwen-studio/models/qwen-image-2.1 --quant
 | 症状 | 根因 | 对策 |
 |---|---|---|
 | 脸完全不像 | 参考图里没脸/脸太小 | 裁到只剩脸，先跑人脸检测 |
-| 姿势丢（变站姿） | 只给骨架没写文字 | 补姿势描述 |
+| 姿势丢（变站姿） | 姿势图放在了脸图后面，被当成了要保留的原图；或只给骨架没写姿势文字 | 姿势图挪到第一张；同时补一句姿势描述 |
+| 明明给了骨架却没生效 | 图序反了，静默失败不报错 | 按路线一「图序铁律」把姿势图放 `images[0]` |
 | 画风变线稿/3D 白模 | 用灰度线稿当控制图 | 换 OpenPose 彩色骨架 |
 | 带进杂物 | 参考图里有该物件 | 逐张裁干净，提分辨率无效 |
 | 头变大/胯变低 | 数字约束被过度执行 | 删数字，改空间参照 |
@@ -164,38 +184,77 @@ mflux-generate-qwen-2.1 --model ~/.dsh/qwen-studio/models/qwen-image-2.1 --quant
 | 用基础模型 CFG 提参考权重 | 本机无权重，Turbo 强制 guidance=1 |
 | 训练角色 LoRA | 模型无 `training_adapter` |
 | 极端姿势必须靠 CN | 已推翻，双 LoRA + 文字即可 |
+| CN 加脸图能同时锁姿势和身份 | 推翻，源码视觉槽位传空列表，CN 无任何身份输入口 |
+| 骨架图放哪都不影响 | 推翻，放第二张会静默失效；必须放 `images[0]`（2026-11-27） |
 | 多图必然稀释身份 | 有限条件成立：三图 + 双 LoRA 可用 |
 | 提分辨率消除串味 | 完全无效，只涨显存 |
 | 拼图法做多参考 | 脸部出现拼贴异物 |
 | 完整四层身形锚点 | 反而恶化胯位，只用胯位空间参照 |
 
-## 资源库 LoRA 出处与配方（2026-11-27 全网核实）
+## 资源库 LoRA 全表（9 个，2026-11-27 核实）
 
-本地文件无元数据的三个，已按官方模型卡确认来源与必需配方：
+用任何 LoRA 前先查这张表。**三项缩放是起点不是定值**，按任务调；但触发词和「能不能配这个路线」是硬约束，不要自行发挥。
 
-| 本地文件 | 官方来源 | 关键信息 |
-|---|---|---|
-| `turbo8_lora_step2500.safetensors` | [chriswritescode/Turbo8](https://huggingface.co/chriswritescode/Turbo8-LoRA-Qwen-Image-2.1) | 8 步**步数蒸馏** LoRA（DMD2 + 轨迹回归），把 base 的 40 步压到 8 步、CFG=1。rank 128。**固定配方：steps 8 / cfg 1 / euler / simple + shift_terminal=None**，任一项改动都没有收益 |
-| `casual-phone-photo.safetensors` | [19nbrown/casual-phone-photo-style-lora](https://huggingface.co/19nbrown/qwen-image-2.1-casual-phone-photo-style-lora) | 风格适配器，126 图 rank 32。**必需触发词 `lbxstyle`**，官方建议强度 **0.8** |
-| `photo-aesthetics-v2.safetensors` | [SimpleTuner/photo-aesthetics-v2](https://huggingface.co/SimpleTuner/Qwen-Image-2.1-LoRA-photo-aesthetics-v2) | 5 万步照片美学 LoRA，512/1024 多尺度 + REPA。rank 32/alpha 32。无触发词，官方按强度 1.0 使用 |
+### 一、主方案三件（姿势+身份路线，只有这三个该一起用）
 
-**两条需要修正的用法**：
+| 文件 | 内嵌名 | 作用 | 强度 | 说明 |
+|---|---|---|---|---|
+| `mva-angles.safetensors` | qwen21_multiple_angles_v2 | **管全身入画 + 相机角度** | 0.6 | 没有它，单图 edit 只出半身特写。prompt 需以 `<mva> full body view.` 开头 |
+| `vnccs-pose.safetensors` | VNCCS_QI2_PoseStudioV2 | **执行文字描述的姿势**，含深蹲/举臂/盘腿 | 0.5 | 实测 0.3→0.390 / 0.5→0.720 / 0.7→0.461，0.5 最优，不必调高 |
+| `consistency-lora.safetensors` | qwen21_consistency_v1 | **抑制换姿势/换 seed 的身份漂移** | 0.5 | 极端姿势必带。举臂 seed333 从 0.038 救到 0.464，无它该 seed 直接崩 |
 
-1. **`casual-phone-photo` 缺触发词**。官方要求 prompt 里含 `lbxstyle` 才激活风格，我们此前只按强度调、没写触发词。官方建议 0.8，本机预设用的是 0.5。
-2. **`turbo8` 的调度器**。官方要求 euler + simple + `shift_terminal=None`；本机若走 `linear` 调度器，与蒸馏配方不一致，画质会劣化。用 turbo8 时优先确认调度器，或改用 base 默认路径。
+**禁忌**：三件之外不要再加任何 LoRA。实测附加非核心 LoRA 身份全部降分（见下）。
 
-> **实测结论（2026-11-27）**：
-> - 本机 mflux 的调度器只有 `linear`、`flow_match_euler_discrete`、`seedvr2_euler` 三个，**没有官方要求的 `simple`**。
-> - mflux 源码里**没有 turbo8 的任何配方**（grep 零命中）。它的 `qwen21_scheduler.py` 是给 **Viggle turbo LoRA** 写的固定 sigma 表（6 步、`SIGMA_NODES=(1.0,0.9375,0.875,0.75,0.5,0.25)`），不是 turbo8 的 8 步蒸馏表。
-> - 因此**本机叠加 turbo8 时无法完全复现官方配方**：步数 8 与 cfg 1 能对上，但 `euler/simple + shift_terminal=None + ModelSamplingFlux(max_shift 0.6935)` 这一整套无法原样提供。
-> - 现状**待确认**：本机实际画质是否已受影响。已知本机主方案（三 LoRA + edit）不依赖 turbo8，用它只为 base 打底的场景；若要用 turbo8 追求速度，应先做一次 A/B 对比确认是否劣化。
+### 二、风格类（纯文生图用，禁止叠加到身份路线）
 
-## 资源库 LoRA 现状
+| 文件 | 出处 | 作用 | 触发词 | 强度 |
+|---|---|---|---|---|
+| `turbo8_lora_step2500.safetensors` | [chriswritescode/Turbo8](https://huggingface.co/chriswritescode/Turbo8-LoRA-Qwen-Image-2.1) | **8 步蒸馏**（DMD2 + 轨迹回归），base 40 步压到 8 步、CFG=1，rank 128 | 无 | 1.0 |
+| `anything2real.safetensors` | 内嵌名 anime2real | **去二次元感、增真实感**，毛孔雀斑最自然 | 无 | 0.3 |
+| `photo-aesthetics-v2.safetensors` | [SimpleTuner/photo-aesthetics-v2](https://huggingface.co/SimpleTuner/Qwen-Image-2.1-LoRA-photo-aesthetics-v2) | **边缘锐利通透**，产品/建筑/杂志硬照。5 万步、rank 32 | 无 | 0.5（官方 1.0） |
+| `casual-phone-photo.safetensors` | [19nbrown/casual-phone-photo-style-lora](https://huggingface.co/19nbrown/qwen-image-2.1-casual-phone-photo-style-lora) | **最平滑干净的网红脸**（grain 2.34，全场最平滑）。126 图、rank 32 | **`lbxstyle`（必需）** | 官方 0.8；本机预设用 0.5 |
 
-**核心三件（唯一推荐组合）**：`mva-angles` @0.6、`vnccs-pose` @0.5、`consistency-lora` @0.5
+**`casual-phone-photo` 必须在 prompt 里写 `lbxstyle`**，否则风格不激活——等于白挂。插件不会自动注入，**由 Agent 在写 prompt 时手动加上**（例如 `lbxstyle, 一个女生的日常自拍…`）。这是本机当前唯一需要触发词的 LoRA。
 
-**历史测试，不推荐用于主方案**：anyangle、anything2real、casual-phone-photo、outfit-swap、photo-aesthetics-v2、turbo8
+内置三个风格预设就是这几个的组合：
 
-**风格类（仅纯文生图）**：Clay-Sculpture-Style、Next-Scene
+| 按钮 | 组合 |
+|---|---|
+| 纪实真实 | turbo8@0.5 + anything2real@0.3 |
+| 商业锐利 | turbo8@0.3 + photo-aesthetics@0.5 |
+| 干净美颜 | turbo8@0.5 + casual-phone@0.5（**注意：预设不含 lbxstyle**，用它要自己补触发词，或把强度提到 0.8） |
 
-全网搜过的 ma-angles-v2、natural-exposure 均低于现组合，**不必再找**。
+### 三、专项用途
+
+| 文件 | 内嵌名 | 作用 | 强度 | 建议 |
+|---|---|---|---|---|
+| `anyangle.safetensors` | QI2.1_AnyAngle | **只换相机角度**，比 ControlNet 轻 | 0.8–1.0 | 身份 0.526，机位跟随弱，需文字配合 |
+| `outfit-swap.safetensors` | qwen21_outfit_v1b | 换装专用 | — | **不推荐**：身份仅 0.372，且需第二张服装图。用文字描述服装更稳 |
+
+### 四、附加 LoRA 的降分实测（为什么不许叠）
+
+在双 LoRA 基准（0.7192）上再加一个 @0.3：
+
+| 附加项 | 身份 |
+|---|---|
+| 基准（mva + vnccs + consistency） | **0.719** |
+| + turbo8@0.3 | 0.706 |
+| + photo-aesthetics@0.3 | 0.695 |
+| + casual-phone@0.3 | 0.694 |
+| + anything2real@0.3 | 0.690 |
+| + natural-exposure@0.3 | 0.689 |
+| + omni-lora@0.3 | 0.582 |
+
+**全部降分**。要别的效果就**另起一个任务**，不要在同一张图上既要身份又要风格。
+
+### 五、turbo8 的本机限制（重要）
+
+官方固定配方是 `steps 8 / cfg 1 / euler / simple + shift_terminal=None + ModelSamplingFlux(max_shift 0.6935)`，模型卡明确写「任一项改动都没有收益」。
+
+本机实际情况（2026-11-27 查证）：
+
+- mflux 调度器只有 `linear`、`flow_match_euler_discrete`、`seedvr2_euler`，**没有 `simple`**
+- mflux 源码 **turbo8 零命中**，无内置配方
+- `qwen21_scheduler.py` 是给 **Viggle turbo**（6 步）写的，不是 turbo8 的 8 步表
+
+**结论**：步数与 CFG 能对上，调度器那套对不上。**待确认**是否已造成画质劣化——主方案不依赖 turbo8，只在纯文生图打底时用；若要用它追求速度，先做一次 A/B 对比。
